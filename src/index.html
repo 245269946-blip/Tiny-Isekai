@@ -4,682 +4,496 @@
 <title>异世界开拓者</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{background:#111;overflow:hidden;height:100dvh;width:100vw;touch-action:none;user-select:none;-webkit-user-select:none;font-family:'Noto Sans SC','PingFang SC',system-ui,sans-serif}
-#gc{display:block;width:100%;height:100%}
+body{background:#111;overflow:hidden;height:100dvh;width:100vw;touch-action:none;user-select:none;-webkit-user-select:none;font-family:system-ui,sans-serif}
+canvas{display:block;width:100%;height:100%;image-rendering:pixelated}
 </style></head><body>
-<canvas id="gc"></canvas>
+<canvas id="c"></canvas>
 <script>
-// ╔══════════════════════════════════════════════════════╗
-// ║  异世界开拓者 v5  —  行走·发现·建造·变化           ║
-// ╚══════════════════════════════════════════════════════╝
-const TS=48; // tile size in logical pixels
-let W,H,SCALE=1,CX=0,CY=0,FR=0;
-let held={},touchDir=null,touchStart=null;
+// ═══════════════ 异世界开拓者 v6 — 小地图分块 · 剧情推进 · 零空气墙 ═══════════════
+const T=48;let W,H,CX=0,CY=0,FR=0;
+const held={};let touchOn=false,touchDX=0,touchDY=0,touchId=null;
+let particles=[],ftexts=[];
+// SCREEN SYSTEM
+let curScreen='home'; // home | east | south | deep
+const MAPS={};
+let player={x:10,y:10,dir:0};
 
-// ─── PALETTE ───
-const P={
-  gr1:'#3d5a3c',gr2:'#45633e',gr3:'#3a5535',
-  dt:'#6b5340',pt:'#8a7355',wd:'#8b6914',
-  st:'#707070',st2:'#888',wt:'#3a7090',wt2:'#5a90b0',
-  rf:'#b33a30',wl:'#c4956a',sk:'#f0c8a0',hr:'#4a2810',
-  sv:'#c0c0d0',eg:'#3a8c40',fp:'#9b6fb0',fl:'#c8a0d8',
-  wp:'#6b3fa0',pink:'#ff69b4',gd:'#c8a45c',
+// ═══════════════ RESOURCES & STATE ═══════════════
+const R={wood:0,stone:0,starshard:0,herb:0,crystal:0};
+let GS={day:1,tod:'day',todTimer:0,dayFrames:600,
+  traits:[],disc:[],journal:[],flags:{},built:['hut'],
+  expDone:{east:false,south:false,deep:false},
 };
 
-// ─── WORLD ───
-const MW=80,MH=60;
-let worldTiles=[],worldEnts=[];
+// ═══════════════ BUILDING DEFS ═══════════════
+const BLD={
+  hut:{name:'小屋',cost:{},desc:'家',icon:'🏠'},
+  storage:{name:'仓库',cost:{wood:3,stone:2},desc:'存放物资',icon:'📦',need:'east'},
+  craft:{name:'工具台',cost:{wood:5,stone:3},desc:'制作工具',icon:'🔨',need:'east'},
+  furnace:{name:'熔炉',cost:{stone:5,starshard:1},desc:'冶炼',icon:'🔥',need:'south'},
+  garden:{name:'菜园',cost:{wood:3,herb:2},desc:'种奇异作物',icon:'🌱',need:'east'},
+  watch:{name:'观星台',cost:{wood:8,stone:5,starshard:2},desc:'解锁新区域',icon:'🔭',need:'deep'},
+};
+function canBuild(id){const b=BLD[id];if(!b||GS.built.includes(id))return false;if(b.need&&!GS.expDone[b.need])return false;return Object.entries(b.cost).every(([k,v])=>(R[k]||0)>=v);}
+function doBuild(id){if(!canBuild(id))return false;const b=BLD[id];Object.entries(b.cost).forEach(([k,v])=>R[k]-=v);GS.built.push(id);spawnParticles(player.x*T+T/2,player.y*T+T/2,'#ffd700',16);ftext(player.x*T+T/2,player.y*T-T/2,'🏗️ '+b.name,'#ffd700',16);beep(500,.12);return true;}
 
-function genWorld(){
-  worldTiles=[];worldEnts=[];
-  for(let y=0;y<MH;y++){worldTiles[y]=[];for(let x=0;x<MW;x++)worldTiles[y][x]={t:'grass',v:(x+y*3)%4};}
-  // River
-  for(let y=8;y<45;y++){for(let dx=-1;dx<=1;dx++){const x=38+dx;if(x>=0&&x<MW)worldTiles[y][x]={t:'water',v:0};}}
-  // Bridge
-  worldTiles[26][38]={t:'bridge',v:0};worldTiles[27][38]={t:'bridge',v:0};
-  // Home clearing
-  for(let y=20;y<=32;y++)for(let x=22;x<=33;x++){if(worldTiles[y][x].t!=='water')worldTiles[y][x]={t:'grass_home',v:0};}
-  // Path home→bridge
-  for(let x=33;x<=38;x++)worldTiles[26][x]={t:'path',v:0};
-
-  // Trees
-  const trees=[[15,14],[18,16],[12,18],[20,15],[10,20],[16,22],[8,24],[22,14],[25,16],[28,13],[30,18],[44,14],[47,16],[50,13],[53,18],[55,15],[58,20],[60,14],[63,17],[14,30],[18,33],[10,35],[22,28],[25,30],[45,30],[48,27],[50,32],[55,28],[58,34],[60,30]];
-  trees.forEach(([x,y])=>{if(x>=0&&x<MW&&y>=0&&y<MH&&worldTiles[y][x].t==='grass')worldTiles[y][x]={t:'tree',v:0,hp:3};});
-
-  // Rocks
-  const rocks=[[17,20],[13,25],[20,28],[15,32],[26,20],[29,22],[24,28],[28,32],[45,20],[48,22],[52,25],[46,30],[56,22],[60,25],[58,30]];
-  rocks.forEach(([x,y])=>{if(x>=0&&x<MW&&y>=0&&y<MH&&worldTiles[y][x].t==='grass')worldTiles[y][x]={t:'rock',v:0,hp:2};});
-
-  // Berry bushes
-  [[19,24],[23,22],[27,24],[21,30],[25,32],[49,24],[51,28],[54,22],[57,27],[59,24]].forEach(([x,y])=>{if(worldTiles[y]&&worldTiles[y][x]?.t==='grass')worldTiles[y][x]={t:'berry',v:0};});
-
-  // ══════ ANOMALIES ══════
-  // Floating rocks
-  for(let y=12;y<42;y+=4){for(let x=42;x<55;x+=5){
-    if((x+y)%7===0&&worldTiles[y]&&worldTiles[y][x]?.t==='grass'){
-      worldEnts.push({type:'float_rock',x:x+.5,y:y+.5,phase:Math.random()*Math.PI*2,alive:true,data:{}});
-    }
+// ═══════════════ MAP GENERATION ═══════════════
+function makeMap(w,h,tiles,ents,triggers,label){
+  const grid=[];for(let y=0;y<h;y++){grid[y]=[];for(let x=0;x<w;x++)grid[y][x]={t:'grass',v:0};}
+  // Apply tiles from template
+  if(tiles){for(const t of tiles){
+    if(t.r){for(let y=t.r[0];y<=t.r[1];y++)for(let x=t.r[2];x<=t.r[3];x++)grid[y][x]={t:t.t,v:t.v||0};}
+    else if(t.p)grid[t.p[1]][t.p[0]]={t:t.t,v:t.v||0,data:t.data};
   }}
-  // Walking trees
-  [[60,12],[63,15],[61,19],[64,22],[60,27],[63,30],[62,35]].forEach(([x,y])=>{
-    worldEnts.push({type:'walk_tree',x:x+.5,y:y+.5,phase:Math.random()*Math.PI*2,alive:true,dx:0,dy:0,data:{moved:0}});
-  });
-  // Crystal snail
-  worldEnts.push({type:'crystal_snail',x:44.5,y:35,phase:0,alive:true,pathIdx:0,data:{path:[[44,35],[46,36],[48,35],[50,34],[48,33],[46,34]]}});
-  // Memory jellyfish
-  for(let i=0;i<3;i++)worldEnts.push({type:'memory_jelly',x:42+i*4,y:15+i*3,phase:Math.random()*Math.PI*2,alive:true,data:{}});
-  // Mirror butterflies
-  worldEnts.push({type:'mirror_butterfly',x:56,y:20,cx:56,cy:20,phase:0,alive:true,butterflies:Array.from({length:12},(_,i)=>({dx:(Math.random()-.5)*6,dy:(Math.random()-.5)*6,ph:Math.random()*Math.PI*2,sp:0.3+Math.random()*0.7}))});
-  // Void merchant (spawns later)
-  worldEnts.push({type:'void_merchant',x:58,y:28,alive:false,phase:0,spawnDay:2,data:{}});
-
-  // Glitch edge
-  for(let y=5;y<50;y+=2)for(let x=75;x<MW;x+=3)if(worldTiles[y]&&worldTiles[y][x])worldTiles[y][x]={t:'glitch',v:0};
+  return {w,h,grid,ents:ents||[],triggers:triggers||[],label:label||''};
 }
 
-// ─── PLAYER ───
-let player={x:27.5,y:26.5,vx:0,vy:0,dir:0,speed:3.5};
+// ─── HOME MAP (16×12) ───
+MAPS.home=makeMap(16,12,[
+  // Fence border (clear visual boundary)
+  {r:[0,11,0,0],t:'fence'},{r:[0,11,15,15],t:'fence'},
+  {r:[0,2,0,15],t:'fence'},{r:[9,11,0,15],t:'fence'},
+  // Right side: opening (exit to east)
+  {r:[0,2,3,6],t:'tree'},{r:[9,11,3,6],t:'tree'}, // top forest
+  {r:[0,2,9,15],t:'tree'},{r:[9,11,9,15],t:'tree'}, // bottom forest
+  // Grass clearing
+  {r:[3,8,1,14],t:'grass_home'},
+  // Path to east exit
+  {p:[15,5],t:'path'},{p:[14,5],t:'path'},{p:[13,5],t:'path'},
+  // River right side
+  {r:[5,5,8,10],t:'water'},
+  // Bridge over river
+  {p:[8,7],t:'bridge'},{p:[9,7],t:'bridge'},{p:[10,7],t:'bridge'},
+],[
+  // Lily near hut
+  {type:'lily',x:5,y:6,dir:0},
+],[
+  // Trigger: talk to Lily
+  {x:5,y:6,type:'lily_talk',done:false},
+  // Exit east
+  {x:15,y:5,type:'exit',target:'east',entry:{x:1,y:7}},
+  // Building spots
+  {x:10,y:4,type:'build_spot',id:'storage'},
+  {x:11,y:4,type:'build_spot',id:'craft'},
+  {x:12,y:4,type:'build_spot',id:'furnace'},
+  {x:10,y:8,type:'build_spot',id:'garden'},
+  {x:11,y:8,type:'build_spot',id:'watch'},
+],'🏠 领地');
 
-// ─── HOME & BUILDINGS ───
-let buildings=[{type:'hut',x:27,y:25}];
-let builtSet=['hut'];
+// ─── EAST MAP (16×12) ───
+MAPS.east=makeMap(16,12,[
+  // Border trees (left=home exit, right=blocked until ch1)
+  {r:[0,1,0,15],t:'tree'},{r:[14,15,0,15],t:'tree'},
+  {r:[0,11,0,0],t:'tree'},{r:[0,11,15,15],t:'tree'},
+  {r:[0,1,1,4],t:'grass'},{r:[0,1,8,11],t:'grass'}, // entry path
+  // Path
+  {p:[1,6],t:'path'},{p:[2,6],t:'path'},{p:[3,6],t:'path'},{p:[4,6],t:'path'},
+  {p:[5,5],t:'path'},{p:[6,5],t:'path'},{p:[7,5],t:'path'},
+  // Creek
+  {r:[6,6,8,12],t:'water'},
+  {p:[8,8],t:'bridge'},{p:[8,9],t:'bridge'},
+  // Trees
+  {p:[3,3],t:'tree'},{p:[4,2],t:'tree'},{p:[5,3],t:'tree'},{p:[2,9],t:'tree'},{p:[3,10],t:'tree'},
+  // Rocks
+  {p:[4,9],t:'rock'},{p:[6,2],t:'rock'},{p:[7,9],t:'rock'},
+  // Berries
+  {p:[5,8],t:'berry'},{p:[3,5],t:'berry'},
+],[
+  // Floating rocks
+  {type:'float_rock',x:9,y:4,phase:0,alive:true},
+  {type:'float_rock',x:11,y:3,phase:1,alive:true},
+  {type:'float_rock',x:10,y:6,phase:2,alive:true},
+  {type:'float_rock',x:13,y:5,phase:3,alive:true},
+  // Walking tree
+  {type:'walk_tree',x:12,y:8,phase:0,alive:true},
+  // Memory jelly
+  {type:'memory_jelly',x:10,y:3,phase:0,alive:true},
+],[
+  {x:1,y:6,type:'exit',target:'home',entry:{x:14,y:5}},
+  // Blocked east exit (unlocks with watchtower)
+  {x:14,y:5,type:'exit',target:'deep',entry:{x:1,y:6},need:'watch'},
+],'🌲 东部荒野');
 
-// ─── GAME STATE ───
-let GS={
-  day:1,tod:'morning', // morning|day|dusk|night
-  todTimer:0,dayLen:480, // frames per time period
-  res:{wood:0,stone:0,starshard:0,herb:0,crystal:0,ironOre:0},
-  traits:[],disc:[],journal:[],
-  flags:{firstExp:false,firstNight:false,dreamHad:false,firstChange:false,ch1:false},
-  lilyAff:0,lilyTalks:0,expCompleted:[],
-  playerBubble:null,bubbleTimer:0,
-  npcBubbles:{},
+// ─── SOUTH MAP (16×12) ───
+MAPS.south=makeMap(16,12,[
+  {r:[0,1,0,15],t:'tree'},{r:[14,15,0,15],t:'tree'},
+  {r:[0,11,0,0],t:'tree'},{r:[0,11,15,15],t:'tree'},
+  {r:[0,1,2,5],t:'grass'},{r:[0,1,8,11],t:'grass'},
+  {p:[1,9],t:'path'},{p:[2,9],t:'path'},{p:[3,8],t:'path'},{p:[4,7],t:'path'},
+  {p:[5,6],t:'path'},{p:[6,5],t:'path'},{p:[7,5],t:'path'},
+  {r:[8,10,4,12],t:'water'},
+  {p:[8,6],t:'bridge'},{p:[8,7],t:'bridge'},
+  {p:[4,3],t:'tree'},{p:[5,3],t:'tree'},{p:[7,2],t:'tree'},{p:[10,2],t:'tree'},{p:[12,3],t:'tree'},
+  {p:[3,11],t:'rock'},{p:[5,10],t:'rock'},{p:[13,8],t:'rock'},
+  {p:[6,9],t:'berry'},{p:[11,6],t:'berry'},
+  // Old ruins
+  {r:[11,13,9,11],t:'ruins'},
+],[
+  {type:'crystal_snail',x:8,y:4,phase:0,alive:true},
+  {type:'memory_jelly',x:13,y:6,phase:0,alive:true},
+  {type:'void_merchant',x:11,y:3,alive:true},
+],[
+  {x:1,y:9,type:'exit',target:'home',entry:{x:8,y:11}},
+  // Ruins trigger
+  {x:12,y:10,type:'ruins_trig',done:false},
+],'🏞️ 南部溪谷');
+
+// ─── DEEP FOREST MAP (16×12) ───
+MAPS.deep=makeMap(16,12,[
+  {r:[0,1,0,15],t:'tree'},{r:[14,15,0,15],t:'tree'},
+  {r:[0,11,0,0],t:'tree'},{r:[0,11,15,15],t:'tree'},
+  {r:[0,1,2,5],t:'grass'},{r:[0,1,8,11],t:'grass'},
+  {p:[1,7],t:'path'},{p:[2,7],t:'path'},{p:[3,7],t:'path'},
+  {p:[4,6],t:'path'},{p:[5,5],t:'path'},{p:[6,4],t:'path'},
+  {p:[7,3],t:'path'},{p:[8,3],t:'path'},
+  // Dark trees
+  {p:[5,2],t:'tree'},{p:[9,3],t:'tree'},{p:[11,4],t:'tree'},
+  {p:[4,9],t:'tree'},{p:[6,10],t:'tree'},{p:[10,9],t:'tree'},{p:[12,8],t:'tree'},
+  // Ancient tree (center)
+  {r:[7,9,5,8],t:'ancient_tree'},
+],[
+  {type:'mirror_butterfly',x:10,y:5,alive:true,bfly:8},
+  {type:'void_merchant',x:6,y:4,alive:true},
+  {type:'walk_tree',x:13,y:9,phase:0,alive:true},
+  {type:'memory_jelly',x:3,y:5,phase:0,alive:true},
+],[
+  {x:1,y:7,type:'exit',target:'east',entry:{x:13,y:5}},
+  {x:8,y:7,type:'ancient_trig',done:false},
+],'🌳 漫步森林深处');
+
+// Building positions on home map
+let bldgPositions={
+  hut:[4,4],storage:[10,3],craft:[11,3],furnace:[12,3],garden:[10,9],watch:[11,9]
 };
 
-// ─── BUILDING DEFS ───
-const BDEFS={
-  hut:{name:'小屋',icon:'🏠',cost:{},desc:'你的家',buildOn:['grass_home']},
-  storage:{name:'仓库',icon:'📦',cost:{wood:3,stone:2},desc:'存放资源',buildOn:['grass_home']},
-  craft:{name:'工具台',icon:'🔨',cost:{wood:5,stone:3},desc:'制作工具',buildOn:['grass_home']},
-  furnace:{name:'熔炉',icon:'🔥',cost:{stone:5,ironOre:2},desc:'冶炼金属',buildOn:['grass_home']},
-  garden:{name:'菜园',icon:'🌱',cost:{wood:3,herb:2},desc:'种植作物',buildOn:['grass_home'],need:'firstExp'},
-  watch:{name:'观星台',icon:'🔭',cost:{wood:10,stone:6,starshard:2},desc:'解锁第一章',buildOn:['grass_home']},
-};
-
-// ─── BUBBLES ───
-function playerSay(text,col='#fff'){GS.playerBubble=text;GS.bubbleTimer=120;}
-function npcSay(id,text,col='#ddd'){GS.npcBubbles[id]=text;}
-
-// ─── PARTICLES ───
-let particles=[];
-function spawnP(x,y,color,count=8,speed=2){
-  for(let i=0;i<count;i++){
-    const a=Math.random()*Math.PI*2,d=Math.random()*speed;
-    particles.push({x,y,vx:Math.cos(a)*d,vy:Math.sin(a)*d-1,life:25+Math.random()*20,color,size:1.5+Math.random()*2});
-  }
+// ═══════════════ PARTICLES ═══════════════
+function spawnParticles(x,y,color,n=8,s=2){
+  for(let i=0;i<n;i++){const a=Math.random()*Math.PI*2,d=Math.random()*s;particles.push({x,y,vx:Math.cos(a)*d,vy:Math.sin(a)*d-1,life:20+Math.random()*20,color,size:1+Math.random()*2});}
 }
-
-// ─── FLOATING TEXT ───
-let ftexts=[];
-function ftext(x,y,text,color='#fff',size=14){
-  ftexts.push({x,y,text,color,size,life:50,oy:y});
-}
-
-// ─── AUDIO (simple Web Audio beeps) ───
+function ftext(x,y,text,color='#fff',size=14){ftexts.push({x,y,text,color,size,life:55,oy:y});}
 let actx=null;
-function beep(freq=440,len=.08,vol=.05){
-  try{
-    if(!actx)actx=new(window.AudioContext||window.webkitAudioContext)();
-    const o=actx.createOscillator(),g=actx.createGain();
-    o.type='square';o.frequency.value=freq;g.gain.value=vol;
-    o.connect(g);g.connect(actx.destination);
-    o.start();g.gain.exponentialRampToValueAtTime(.001,actx.currentTime+len);
-    o.stop(actx.currentTime+len);
-  }catch(e){}
-}
+function beep(f=440,l=.08,v=.05){try{if(!actx)actx=new(window.AudioContext||window.webkitAudioContext)();const o=actx.createOscillator(),g=actx.createGain();o.type='square';o.frequency.value=f;g.gain.value=v;o.connect(g);g.connect(actx.destination);o.start();g.gain.exponentialRampToValueAtTime(.001,actx.currentTime+l);o.stop(actx.currentTime+l);}catch(e){}}
 
-// ─── INTERACTION ───
+// ═══════════════ LILY BUBBLE ═══════════════
+let lilyBubble=null,lbTimer=0;
+function lilySay(txt){lilyBubble=txt;lbTimer=150;}
+
+// ═══════════════ HINT SYSTEM ═══════════════
+let hintText=null,htTimer=0;
+function hint(txt,t=200){hintText=txt;htTimer=t;}
+
+// ═══════════════ INTERACTION ═══════════════
 function interact(){
-  const dx=[0,1,0,-1][player.dir],dy=[-1,0,1,0][player.dir];
-  const tx=Math.floor(player.x+dx*.7),ty=Math.floor(player.y+dy*.7);
+  const map=MAPS[curScreen];if(!map)return;
+  const px=Math.floor(player.x+.5),py=Math.floor(player.y+.5);
 
   // Check entities
-  for(let i=worldEnts.length-1;i>=0;i--){
-    const e=worldEnts[i];
-    if(!e.alive)continue;
+  for(let i=map.ents.length-1;i>=0;i--){
+    const e=map.ents[i];if(!e.alive)continue;
     const dist=Math.hypot(player.x-e.x,player.y-e.y);
-    if(dist<1.3){
-      interactEntity(e,i);
-      return;
-    }
+    if(dist<1.2){interactEntity(e,i,map);return;}
   }
 
   // Check tile
-  if(tx>=0&&tx<MW&&ty>=0&&ty<MH){
-    const tile=worldTiles[ty][tx];
-    if(tile.t==='tree'&&tile.hp>0){
-      tile.hp--;GS.res.wood+=1+Math.floor(Math.random()*2);
-      spawnP(tx*TS+TS/2,ty*TS+TS/2,'#8B6914',6);
-      ftext(tx*TS+TS/2,ty*TS,'+🪵',P.wd);
-      beep(220,.06);if(tile.hp<=0){ftext(tx*TS+TS/2,ty*TS-10,'树倒了',P.wd,10);}
-    }else if(tile.t==='rock'&&tile.hp>0){
-      tile.hp--;GS.res.stone+=1+Math.floor(Math.random()*2);
-      spawnP(tx*TS+TS/2,ty*TS+TS/2,'#888',5);
-      ftext(tx*TS+TS/2,ty*TS,'+🪨',P.st);beep(300,.05);
-    }else if(tile.t==='berry'){
-      GS.res.herb+=2;worldTiles[ty][tx]={t:'grass',v:0};
-      spawnP(tx*TS+TS/2,ty*TS+TS/2,'#ff6b6b',4);
-      ftext(tx*TS+TS/2,ty*TS,'+2🌿','#ff6b6b');beep(500,.08);
+  if(px>=0&&px<map.w&&py>=0&&py<map.h){
+    const tile=map.grid[py][px];
+    if(tile.t==='tree'){GS.res.wood?R.wood+=2:0;R.wood+=2;tile.t='stump';spawnParticles(px*T+T/2,py*T+T/2,'#8B6914',6);ftext(px*T+T/2,py*T,'+2🪵','#c4956a');beep(220,.06);}
+    else if(tile.t==='rock'){R.stone+=2;tile.t='rubble';spawnParticles(px*T+T/2,py*T+T/2,'#888',5);ftext(px*T+T/2,py*T,'+2🪨','#aaa');beep(300,.05);}
+    else if(tile.t==='berry'){R.herb+=2;map.grid[py][px]={t:'grass',v:0};spawnParticles(px*T+T/2,py*T+T/2,'#ff6b6b',5);ftext(px*T+T/2,py*T,'+2🌿','#ff6b6b');beep(500,.08);}
+    else if(tile.t==='ruins'){if(!GS.flags.ruinsRead){GS.flags.ruinsRead=true;GS.journal.push('发现了前领主的笔记。第30天他写道"它知道我在看它"。');lilySay('前领主的笔记...他消失前留下的最后线索');R.starshard+=2;ftext(px*T+T/2,py*T,'+2✨ 笔记碎片','#ffd700',14);beep(600,.15);}}
+    else if(tile.t==='ancient_tree'){if(!GS.flags.ancientRead){GS.flags.ancientRead=true;GS.journal.push('古树树皮上刻着来自不同世界的留言。一棵树间之门——通向哪里？');R.crystal+=2;R.starshard+=1;ftext(px*T+T/2,py*T,'+2💎 +1✨','#aaddff',14);beep(350,.2);}}
+  }
+
+  // Check triggers
+  for(const tr of map.triggers){
+    if(tr.done)continue;
+    if(tr.need&&!GS.expDone[tr.need]&&!GS.built.includes(tr.need))continue;
+    if(Math.abs(px-tr.x)<1.5&&Math.abs(py-tr.y)<1.5){
+      triggerEvent(tr,map);
     }
   }
 }
 
-function interactEntity(e,i){
+function interactEntity(e,i,map){
   switch(e.type){
-    case 'float_rock':
-      if(!e.alive)break;
-      e.alive=false;GS.res.starshard+=1;GS.res.stone+=1;
-      spawnP(e.x*TS,e.y*TS,P.pink,12,3);
-      ftext(e.x*TS,e.y*TS,'✨星之碎片','#ff69b4',16);
-      if(!GS.disc.includes('浮游岩群')){GS.disc.push('浮游岩群');ftext(e.x*TS,e.y*TS-20,'新发现！','#ffd700',12);}
-      beep(600,.1);
-      break;
-    case 'walk_tree':
-      if(!e.alive)break;
-      e.alive=false;GS.res.wood+=3;
-      spawnP(e.x*TS,e.y*TS,'#9b59b6',10,2);
-      ftext(e.x*TS,e.y*TS,'+3🪵活木！','#9b59b6',16);
-      if(!GS.disc.includes('漫步树')){GS.disc.push('漫步树');ftext(e.x*TS,e.y*TS-20,'它在躲避什么...','#c8a0d8',12);}
-      GS.journal.push('遇到了漫步树。它没有攻击，只是离开时留下了一截发光树枝。');
-      beep(400,.15);
-      break;
-    case 'crystal_snail':
-      if(!e.alive)break;
-      e.alive=false;GS.res.crystal+=1;GS.res.herb+=1;
-      spawnP(e.x*TS,e.y*TS,'#88ccff',8,2);
-      ftext(e.x*TS,e.y*TS,'+1💎晶片','#88ccff',14);
-      GS.journal.push('晶壳蜗牛留下了晶片。它的壳像活的棱镜。');
-      beep(800,.12);
-      // New snail spawns later
-      setTimeout(()=>{if(worldEnts[i])worldEnts[i].alive=true;},30000);
-      break;
-    case 'memory_jelly':
-      if(!e.alive)break;
-      e.alive=false;
-      spawnP(e.x*TS,e.y*TS,'#aaccff',15,3);
-      ftext(e.x*TS,e.y*TS,'记忆碎片...','#aaddff',14);
-      if(!GS.disc.includes('记忆水母')){GS.disc.push('记忆水母');}
-      GS.journal.push('触碰了记忆水母。看到了前领主在写日记。');
-      // Give a journal entry as memory
-      playerSay('"抬头看天"——是谁在说？','#aaddff');
-      beep(350,.2);
-      break;
-    case 'mirror_butterfly':
-      if(!e.alive||!e.butterflies)break;
-      // Catch one butterfly
-      e.butterflies.pop();
-      GS.res.crystal+=1;
-      spawnP(e.x*TS,e.y*TS,'#ffd700',6,2);
-      ftext(e.x*TS,e.y*TS,'+1💎','#ffd700',14);
-      if(!GS.disc.includes('镜面蝶')){GS.disc.push('镜面蝶');ftext(e.x*TS,e.y*TS-20,'翅膀倒映着未来...','#fff',12);}
-      beep(700,.1);
-      if(e.butterflies.length===0)e.alive=false;
-      break;
-    case 'void_merchant':
-      if(!e.alive)break;
-      // Trade with void merchant
-      if(GS.res.herb>=1){GS.res.herb-=1;GS.res.crystal+=2;
-        spawnP(e.x*TS,e.y*TS,'#9b6fb0',8,2);
-        ftext(e.x*TS,e.y*TS,'交易完成 +2💎','#9b6fb0',14);
-      }else{playerSay('没有可以交换的东西...','#888');}
-      if(!GS.disc.includes('虚空商贩')){GS.disc.push('虚空商贩');GS.journal.push('遇到了虚空商贩。它不说话——只交易。');}
-      beep(250,.15);
-      break;
+    case 'float_rock':if(!e.alive)return;e.alive=false;R.starshard+=1;R.stone+=1;
+      spawnParticles(e.x*T+T/2,e.y*T+T/2,'#ff69b4',12,3);ftext(e.x*T+T/2,e.y*T,'✨星之碎片！','#ff69b4',16);
+      if(!GS.disc.includes('浮游岩')){GS.disc.push('浮游岩');GS.journal.push('发现了浮游岩群——石头在空中漂浮，内部有发光脉络。');}beep(600,.1);break;
+    case 'walk_tree':if(!e.alive)return;e.alive=false;R.wood+=3;
+      spawnParticles(e.x*T+T/2,e.y*T+T/2,'#9b59b6',10,2);ftext(e.x*T+T/2,e.y*T,'+3🪵活木','#9b59b6',16);
+      if(!GS.disc.includes('漫步树')){GS.disc.push('漫步树');GS.journal.push('遇到了会移动的树——它离开时留下了一截发光的树枝。');}beep(400,.15);break;
+    case 'crystal_snail':if(!e.alive)return;e.alive=false;R.crystal+=1;R.herb+=1;
+      spawnParticles(e.x*T+T/2,e.y*T+T/2,'#88ccff',8,2);ftext(e.x*T+T/2,e.y*T,'+1💎晶片','#88ccff',14);
+      GS.journal.push('晶壳蜗牛留下了晶片。壳像活棱镜一样折射阳光。');beep(800,.12);break;
+    case 'memory_jelly':if(!e.alive)return;e.alive=false;
+      spawnParticles(e.x*T+T/2,e.y*T+T/2,'#aaccff',12,3);ftext(e.x*T+T/2,e.y*T,'记忆碎片...','#aaddff',14);
+      if(!GS.disc.includes('记忆水母')){GS.disc.push('记忆水母');GS.journal.push('触碰了记忆水母——看到了不属于自己的记忆片段。前领主在写日记。');}beep(350,.2);break;
+    case 'mirror_butterfly':if(!e.alive)return;e.alive=false;R.crystal+=2;
+      spawnParticles(e.x*T+T/2,e.y*T+T/2,'#ffd700',8,2);ftext(e.x*T+T/2,e.y*T,'+2💎镜翅','#ffd700',14);
+      if(!GS.disc.includes('镜面蝶')){GS.disc.push('镜面蝶');GS.journal.push('捕获了镜面蝶——它的翅膀反射的不是现在，是可能的未来。');}beep(700,.1);break;
+    case 'void_merchant':if(!e.alive)return;if(R.herb>=1){R.herb-=1;R.crystal+=2;
+        spawnParticles(e.x*T+T/2,e.y*T+T/2,'#9b6fb0',8,2);ftext(e.x*T+T/2,e.y*T,'交易 +2💎','#9b6fb0',14);
+      }else{lilySay('没有可以交易的东西...');}GS.disc.includes('虚空商贩')||GS.disc.push('虚空商贩');beep(250,.15);break;
   }
 }
 
-// ─── BUILDING ───
-function tryBuildHere(bid){
-  const def=BDEFS[bid];if(!def||builtSet.includes(bid))return false;
-  if(def.need&&!GS.flags[def.need])return false;
-  for(const[k,v]of Object.entries(def.cost)){if((GS.res[k]||0)<v)return false;}
-  // Find a valid spot near player in home area
-  const px=Math.round(player.x),py=Math.round(player.y);
-  let bx=px,by=py;
-  // check if tile is valid
-  if(bx<0||bx>=MW||by<0||by>=MH)return false;
-  const tile=worldTiles[by][bx];
-  if(!def.buildOn.includes(tile.t))return false;
-  // check no existing building
-  if(buildings.some(b=>Math.abs(b.x-bx)<1.5&&Math.abs(b.y-by)<1.5))return false;
-
-  for(const[k,v]of Object.entries(def.cost))GS.res[k]-=v;
-  buildings.push({type:bid,x:bx,y:by});builtSet.push(bid);
-  spawnP(bx*TS+TS/2,by*TS+TS/2,'#ffd700',15,3);
-  ftext(bx*TS+TS/2,by*TS,'🏗️'+def.name,'#ffd700',16);
-  beep(500,.15);setTimeout(()=>beep(700,.15),100);
-  if(bid==='watch')GS.flags.ch1=true;
-  if(bid==='storage')GS.flags.firstExp=true;
-  return true;
-}
-
-// ─── INPUT ───
-const gc=document.getElementById('gc');
-gc.addEventListener('touchstart',e=>{
-  e.preventDefault();touchStart={x:e.touches[0].clientX,y:e.touches[0].clientY};
-});
-gc.addEventListener('touchmove',e=>{
-  e.preventDefault();if(!touchStart)return;
-  const dx=e.touches[0].clientX-touchStart.x,dy=e.touches[0].clientY-touchStart.y;
-  const dist=Math.hypot(dx,dy);
-  if(dist>15){touchDir={x:dx/dist,y:dy/dist};}
-});
-gc.addEventListener('touchend',e=>{
-  e.preventDefault();
-  if(touchDir&&Math.hypot(touchDir.x,touchDir.y)>0.3){
-    // Swipe direction
-  }else if(touchStart){
-    // Tap = interact
-    interact();
-  }
-  touchDir=null;touchStart=null;
-});
-gc.addEventListener('mousedown',e=>{touchStart={x:e.clientX,y:e.clientY};});
-gc.addEventListener('mousemove',e=>{if(touchStart){const dx=e.clientX-touchStart.x,dy=e.clientY-touchStart.y;const d=Math.hypot(dx,dy);if(d>15)touchDir={x:dx/d,y:dy/d};}});
-gc.addEventListener('mouseup',e=>{
-  if(touchDir&&Math.hypot(touchDir.x,touchDir.y)>0.3){}else if(touchStart){
-    const d=Math.hypot(e.clientX-touchStart.x,e.clientY-touchStart.y);
-    if(d<10)interact();
-  }
-  touchDir=null;touchStart=null;
-});
-window.addEventListener('keydown',e=>{held[e.key]=true;if(e.key===' '||e.key==='e')interact();if(e.key==='b'){const b=getBuildable()[0];if(b)tryBuildHere(b);}e.preventDefault();});
-window.addEventListener('keyup',e=>{held[e.key]=false;});
-
-function getBuildable(){
-  return Object.keys(BDEFS).filter(bid=>!builtSet.includes(bid)&&(!BDEFS[bid].need||GS.flags[BDEFS[bid].need])&&Object.entries(BDEFS[bid].cost).every(([k,v])=>(GS.res[k]||0)>=v));
-}
-
-// ─── UPDATE ───
-function update(){
-  // Movement
-  let mx=0,my=0;
-  if(touchDir){mx=touchDir.x;my=touchDir.y;}
-  if(held['ArrowUp']||held['w']){my=-1;touchDir=null;}
-  if(held['ArrowDown']||held['s']){my=1;touchDir=null;}
-  if(held['ArrowLeft']||held['a']){mx=-1;touchDir=null;}
-  if(held['ArrowRight']||held['d']){mx=1;touchDir=null;}
-
-  if(mx!==0||my!==0){
-    const len=Math.hypot(mx,my);mx/=len;my/=len;
-    player.vx+=mx*0.4;player.vy+=my*0.4;
-    if(Math.abs(mx)>Math.abs(my))player.dir=mx>0?1:3;
-    else player.dir=my>0?2:0;
-  }else{
-    player.vx*=0.85;player.vy*=0.85;
-    if(Math.abs(player.vx)<.05)player.vx=0;
-    if(Math.abs(player.vy)<.05)player.vy=0;
-  }
-  player.vx=Math.max(-player.speed,Math.min(player.speed,player.vx));
-  player.vy=Math.max(-player.speed,Math.min(player.speed,player.vy));
-
-  // Apply movement with collision
-  let nx=player.x+player.vx*0.016,ny=player.y+player.vy*0.016;
-  const margin=0.25;
-  for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){
-    const tx=Math.floor(nx+dx*margin),ty=Math.floor(ny+dy*margin);
-    if(tx<0||tx>=MW||ty<0||ty>=MH)continue;
-    const tile=worldTiles[ty][tx];
-    if(['water','tree'].includes(tile.t)&&(tile.t!=='tree'||tile.hp>0)){
-      const cx=tx+.5,cy=ty+.5;
-      if(Math.abs(nx+dx*margin-cx)<.4&&Math.abs(ny+dy*margin-cy)<.4){
-        if(Math.abs(nx-cx)<Math.abs(ny-cy))ny=cy+Math.sign(ny-cy)*.4;
-        else nx=cx+Math.sign(nx-cx)*.4;
+function triggerEvent(tr,map){
+  switch(tr.type){
+    case 'lily_talk':
+      if(!GS.flags.firstExp){
+        lilySay('往东走！那些漂浮的石头在等你——从右边的路口出去');
+        hint('→ 向右走到地图边缘 出发远征！',250);
+      }else if(!GS.expDone.south){
+        lilySay('你回来了！看起来收获不错。想再去南边看看吗？');
+        hint('↓ 向下走到地图下方边缘去南部溪谷',250);
+      }else if(!GS.built.includes('watch')&&canBuild('watch')){
+        lilySay('你收集了足够多星之碎片！该建观星台了。');
+        hint('🔭 在领地空地按B键建造观星台',250);
+      }else if(GS.built.includes('watch')&&!GS.expDone.deep){
+        lilySay('观星台建好了！东边的森林深处有动静...');
+        hint('→ 从东边出发去漫步森林深处',250);
+      }else{
+        lilySay('你在发光。和月露草一样的颜色...');
       }
-    }
+      tr.done=false; // Lily always talkable
+      break;
+    case 'exit':
+      if(tr.need&&!GS.built.includes(tr.need)){lilySay('这里还过不去...');return;}
+      transitScreen(tr.target,tr.entry);
+      break;
+    case 'ruins_trig':if(!tr.done){lilySay('这里...是前任领主留下的笔记！');tr.done=true;}break;
+    case 'ancient_trig':if(!tr.done){lilySay('这棵树...它是这个世界的记忆。');tr.done=true;}break;
+    case 'build_spot':
+      const blds=Object.keys(BLD).filter(id=>canBuild(id)&&!GS.built.includes(id));
+      if(blds.length>0){doBuild(blds[0]);}else{lilySay('还没有可以建造的。去收集更多材料吧！');}
+      break;
   }
-  // Building collision
-  for(const b of buildings){
-    const bx=b.x+.5,by=b.y+.5;
-    if(Math.abs(nx-bx)<.35&&Math.abs(ny-by)<.35){
-      if(Math.abs(nx-bx)<Math.abs(ny-by))ny=by+Math.sign(ny-by)*.35;
-      else nx=bx+Math.sign(nx-bx)*.35;
-    }
-  }
-
-  player.x=Math.max(.3,Math.min(MW-.3,nx));
-  player.y=Math.max(.3,Math.min(MH-.3,ny));
-
-  // Time
-  GS.todTimer++;
-  if(GS.todTimer>GS.dayLen){
-    GS.todTimer=0;
-    const tCycle=['morning','day','dusk','night'];
-    const idx=tCycle.indexOf(GS.tod);
-    GS.tod=tCycle[(idx+1)%4];
-    if(GS.tod==='morning'){GS.day++;
-      if(!GS.flags.dreamHad&&GS.day>=2){GS.flags.dreamHad=true;GS.flags.firstChange=true;
-        GS.traits.push('蓝荧之触');GS.journal.push('做了梦。梦里有个声音。醒来时手指会发光。');
-        playerSay('手指...在发光？','#aaccff');}
-      if(GS.day>=2&&GS.flags.ch1&&!GS.flags.firstNight){GS.flags.firstNight=true;GS.journal.push('森林在呼唤。是时候深入探索了。');}
-    }
-  }
-
-  // Update entities
-  for(const e of worldEnts){
-    if(!e.alive)continue;
-    switch(e.type){
-      case 'float_rock':break;
-      case 'walk_tree':
-        e.phase+=0.008;e.data.moved++;
-        e.x+=Math.sin(e.phase)*0.003;e.y+=Math.cos(e.phase*0.7)*0.002;
-        break;
-      case 'crystal_snail':
-        e.phase+=0.005;
-        const path=e.data.path;if(path){
-          const tgt=path[e.pathIdx];e.x+=(tgt[0]+.5-e.x)*0.008;e.y+=(tgt[1]+.5-e.y)*0.008;
-          if(Math.hypot(e.x-tgt[0]-.5,e.y-tgt[1]-.5)<.3)e.pathIdx=(e.pathIdx+1)%path.length;
-        }
-        break;
-      case 'memory_jelly':
-        e.y+=Math.sin(FR*0.02+e.phase)*0.03;e.x+=Math.cos(FR*0.015+e.phase)*0.02;
-        break;
-      case 'mirror_butterfly':
-        if(e.butterflies)e.butterflies.forEach(b=>{
-          b.dx+=(Math.random()-.5)*0.2;b.dy+=(Math.random()-.5)*0.2;
-          b.dx*=0.98;b.dy*=0.98;
-        });
-        break;
-      case 'void_merchant':
-        if(GS.day>=e.spawnDay&&!e.alive&&Math.random()<0.0005)e.alive=true;
-        if(e.alive&&Math.random()<0.0003)e.alive=false;
-        break;
-    }
-  }
-
-  // Particles
-  particles=particles.filter(p=>{p.x+=p.vx;p.y+=p.vy;p.life--;return p.life>0;});
-  // Floating texts
-  ftexts=ftexts.filter(t=>{t.life--;t.y-=.4;return t.life>0;});
-  // Bubbles
-  if(GS.bubbleTimer>0)GS.bubbleTimer--;
-  if(GS.bubbleTimer<=0)GS.playerBubble=null;
-
-  FR++;
 }
 
-// ─── RENDER ───
-function render(){
-  const c=document.getElementById('gc');
-  const pw=window.innerWidth,ph=window.innerHeight;
-  c.width=pw*2;c.height=ph*2;W=pw;H=ph;
-  const ctx=c.getContext('2d');ctx.scale(2,2);
-  ctx.imageSmoothingEnabled=false;
+function transitScreen(target,entry){
+  curScreen=target;player.x=entry.x;player.y=entry.y;
+  // Mark expedition complete
+  if(target==='home'){
+    if(entry.x===14&&entry.y===5)GS.expDone.east=true;
+    if(entry.x===8&&entry.y===11)GS.expDone.south=true;
+    if(entry.x===13&&entry.y===5)GS.expDone.deep=true;
+  }
+  if(!GS.flags.firstExp&&GS.expDone.east){GS.flags.firstExp=true;
+    setTimeout(()=>lilySay('你活着回来了！那些浮游石...不可思议对吧？'),500);}
+  save();
+}
 
-  // Camera
-  const tcx=player.x*TS-W/2,tcy=player.y*TS-H/2;
-  CX+=(tcx-CX)*0.15;CY+=(tcy-CY)*0.15;
+// ═══════════════ RENDER ═══════════════
+function draw(){
+  const c=document.getElementById('c'),pw=window.innerWidth,ph=window.innerHeight;
+  c.width=pw*2;c.height=ph*2;W=pw;H=ph;const ctx=c.getContext('2d');ctx.scale(2,2);ctx.imageSmoothingEnabled=false;
 
-  // Sky color based on time
+  const map=MAPS[curScreen];if(!map)return;
+  // Smooth camera
+  const tcx=player.x*T-W/2,tcy=player.y*T-H/2;
+  CX+=(tcx-CX)*0.12;CY+=(tcy-CY)*0.12;
+
+  // Sky
   const skyMap={morning:'#5a7a8a',day:'#4a7aaa',dusk:'#c07050',night:'#0a0a25'};
-  ctx.fillStyle=skyMap[GS.tod];ctx.fillRect(0,0,W,H);
-  if(GS.tod==='night'){for(let i=0;i<60;i++){ctx.fillStyle=`rgba(255,255,200,${0.2+Math.sin(i*3+FR*0.01)*0.2})`;ctx.beginPath();ctx.arc((i*137)%W,(i*251)%H*0.5,1.2,0,Math.PI*2);ctx.fill();}}
+  ctx.fillStyle=skyMap[GS.tod]||'#4a7aaa';ctx.fillRect(0,0,W,H);
+  if(GS.tod==='night')for(let i=0;i<50;i++){ctx.fillStyle=`rgba(255,255,200,${.1+Math.sin(i*3+FR*.01)*.15})`;ctx.beginPath();ctx.arc((i*167)%W,(i*293)%H*.4,1,0,Math.PI*2);ctx.fill();}
 
-  // Visible tile range
-  const sx=Math.max(0,Math.floor(CX/TS)-1),sy=Math.max(0,Math.floor(CY/TS)-1);
-  const ex=Math.min(MW,sx+Math.ceil(W/TS)+2),ey=Math.min(MH,sy+Math.ceil(H/TS)+2);
+  // Tiles
+  const sx=Math.max(0,Math.floor(CX/T)-1),sy=Math.max(0,Math.floor(CY/T)-1);
+  const ex=Math.min(map.w,sx+Math.ceil(W/T)+2),ey=Math.min(map.h,sy+Math.ceil(H/T)+2);
+  for(let y=sy;y<ey;y++)for(let x=sx;x<ex;x++)drawTile(ctx,x*T-CX,y*T-CY,map.grid[y][x]);
 
-  // Draw tiles
-  for(let y=sy;y<ey;y++)for(let x=sx;x<ex;x++){
-    const px=x*TS-CX,py=y*TS-CY,tile=worldTiles[y][x];
-    drawTile(ctx,px,py,tile);
+  // Buildings on home
+  if(curScreen==='home')for(const id of GS.built){
+    const pos=bldgPositions[id];if(!pos)continue;
+    drawBuilding(ctx,pos[0]*T-CX,pos[1]*T-CY,id);
   }
 
-  // Draw entities
-  for(const e of worldEnts){
-    if(!e.alive&&e.type!=='void_merchant')continue;
-    const ex=e.x*TS-CX,ey=e.y*TS-CY;
-    if(ex<-TS||ex>W+TS||ey<-TS||ey>H+TS)continue;
-    drawEntity(ctx,ex,ey,e);
-  }
+  // Entities
+  for(const e of map.ents){if(!e.alive&&e.type!=='void_merchant')continue;drawEntity(ctx,e.x*T-CX,e.y*T-CY,e);}
 
-  // Draw buildings
-  for(const b of buildings){
-    const bx=b.x*TS-CX,by=b.y*TS-CY;
-    if(bx<-TS||bx>W+TS||by<-TS||by>H+TS)continue;
-    drawBuilding(ctx,bx,by,b.type);
-  }
+  // Lily
+  if(curScreen==='home')drawLily(ctx,5*T-CX,6*T-CY);
 
-  // Draw Lily (NPC) — stands near hut
-  const lilyX=26*TS-CX,lilyY=26.3*TS-CY;
-  drawLily(ctx,lilyX,lilyY);
-
-  // Draw player
-  const plx=player.x*TS-CX,ply=player.y*TS-CY;
-  drawPlayer(ctx,plx,ply);
+  // Player
+  drawPlayer(ctx,player.x*T-CX,player.y*T-CY);
 
   // Particles
-  for(const p of particles){
-    ctx.globalAlpha=p.life/40;
-    ctx.fillStyle=p.color;ctx.fillRect(p.x-CX,p.y-CY,p.size,p.size);
-  }
-  ctx.globalAlpha=1;
+  for(const p of particles){ctx.globalAlpha=p.life/35;ctx.fillStyle=p.color;ctx.fillRect(p.x-CX,p.y-CY,p.size,p.size);}ctx.globalAlpha=1;
+  // Floating text
+  ctx.textAlign='center';for(const t of ftexts){ctx.globalAlpha=Math.min(1,t.life/20);ctx.fillStyle=t.color;ctx.font=`bold ${t.size}px sans-serif`;ctx.fillText(t.text,t.x-CX,t.y-CY);}ctx.globalAlpha=1;
 
-  // Floating texts
-  ctx.textAlign='center';
-  for(const t of ftexts){
-    ctx.globalAlpha=Math.min(1,t.life/20);
-    ctx.fillStyle=t.color;ctx.font=`bold ${t.size}px sans-serif`;
-    ctx.fillText(t.text,t.x-CX,t.y-CY);
+  // Lily bubble
+  if(lilyBubble&&curScreen==='home'){
+    const lx=5*T-CX+T/2,ly=6*T-CY-T/2;
+    ctx.font='11px sans-serif';const tw=ctx.measureText(lilyBubble).width,pad=10;
+    ctx.fillStyle='rgba(0,0,0,.75)';ctx.beginPath();ctx.roundRect(lx-tw/2-pad,ly-20-pad,tw+pad*2,20+pad,8);ctx.fill();
+    ctx.fillStyle='#fff';ctx.fillText(lilyBubble,lx,ly-14);
+    ctx.fillStyle='rgba(0,0,0,.75)';ctx.beginPath();ctx.moveTo(lx-5,ly-pad);ctx.lineTo(lx+5,ly-pad);ctx.lineTo(lx,ly);ctx.fill();
   }
-  ctx.globalAlpha=1;
 
-  // Player bubble
-  if(GS.playerBubble){
-    const bx=plx+TS/2,by=ply-24;
-    ctx.fillStyle='rgba(0,0,0,.7)';const tw=ctx.measureText(GS.playerBubble).width;
-    const bw=tw+20,bh=26;
-    ctx.beginPath();ctx.roundRect(bx-bw/2,by-bh,bw,bh,8);ctx.fill();
-    ctx.fillStyle='#fff';ctx.font='12px sans-serif';ctx.textAlign='center';
-    ctx.fillText(GS.playerBubble,bx,by-bh+18);
-    // Tail
-    ctx.fillStyle='rgba(0,0,0,.7)';ctx.beginPath();
-    ctx.moveTo(bx-6,by);ctx.lineTo(bx+6,by);ctx.lineTo(bx,by+8);ctx.fill();
+  // Hint at bottom
+  if(hintText&&htTimer>0){
+    ctx.fillStyle='rgba(0,0,0,.4)';ctx.fillRect(0,H-34,W,34);
+    ctx.fillStyle='#ffd700';ctx.font='bold 12px sans-serif';ctx.textAlign='center';ctx.fillText(hintText,W/2,H-10);
   }
 
   // Top HUD
-  ctx.fillStyle='rgba(0,0,0,.5)';ctx.fillRect(0,0,W,38);
+  ctx.fillStyle='rgba(0,0,0,.45)';ctx.fillRect(0,0,W,34);
   const todEmoji={morning:'☀️',day:'☀️',dusk:'🌅',night:'🌙'};
-  ctx.fillStyle='#fff';ctx.font='13px sans-serif';ctx.textAlign='left';
-  let hud=`${todEmoji[GS.tod]} 第${GS.day}天  `;
-  hud+=`🪵${GS.res.wood} 🪨${GS.res.stone} ✨${GS.res.starshard} 🌿${GS.res.herb} 💎${GS.res.crystal}`;
-  if(GS.flags.ch1)hud='第一章·林中之声  '+hud;
-  else hud='序幕·苏醒  '+hud;
-  ctx.fillText(hud,10,26);
+  ctx.fillStyle='#fff';ctx.font='12px sans-serif';ctx.textAlign='left';
+  let hud=`${todEmoji[GS.tod]} 第${GS.day}天  🪵${R.wood} 🪨${R.stone} ✨${R.starshard} 🌿${R.herb} 💎${R.crystal}`;
+  const chName=GS.expDone.deep?'第一章·林中之声':'序幕·苏醒';
+  ctx.fillText(`${chName}  ${hud}`,8,24);
 
-  // Bottom hint
-  const bld=getBuildable();
-  const nearHome=Math.hypot(player.x-27.5,player.y-26.5)<6;
-  if(bld.length>0&&nearHome){
-    ctx.fillStyle='rgba(0,0,0,.4)';ctx.fillRect(0,H-32,W,32);
-    ctx.fillStyle='#ffd700';ctx.font='11px sans-serif';ctx.textAlign='center';
-    ctx.fillText(`按B键 / 点击建造 可建造：${bld.map(id=>BDEFS[id].name).join(', ')}`,W/2,H-10);
-  }
-
-  // Traits display
-  if(GS.traits.length>0){
-    ctx.fillStyle='rgba(0,0,0,.5)';ctx.fillRect(W-130,38,130,GS.traits.length*20+8);
+  // Traits right side
+  if(GS.traits.length){
+    ctx.fillStyle='rgba(0,0,0,.4)';ctx.fillRect(W-120,34,120,GS.traits.length*18+4);
     ctx.fillStyle='#aaddff';ctx.font='10px sans-serif';ctx.textAlign='right';
-    GS.traits.forEach((t,i)=>ctx.fillText(t,W-6,56+i*18));
+    GS.traits.forEach((t,i)=>ctx.fillText(t,W-4,50+i*17));
   }
 }
 
 function drawTile(ctx,x,y,tile){
   switch(tile.t){
-    case 'grass':ctx.fillStyle=[P.gr1,P.gr2,P.gr3,P.gr1][tile.v];ctx.fillRect(x,y,TS,TS);break;
-    case 'grass_home':ctx.fillStyle='rgba(60,90,55,.6)';ctx.fillRect(x,y,TS,TS);
-      ctx.strokeStyle='rgba(200,164,92,.08)';ctx.strokeRect(x+.5,y+.5,TS-1,TS-1);break;
-    case 'water':ctx.fillStyle=P.wt;ctx.fillRect(x,y,TS,TS);
-      const wv=Math.sin((x+tile.v+FR*0.03)*.5)*4;
-      ctx.fillStyle='rgba(100,180,220,.25)';ctx.fillRect(x,y+TS/2+wv,TS,5);break;
-    case 'bridge':ctx.fillStyle='#8B7355';ctx.fillRect(x,y,TS+1,TS);
-      ctx.fillStyle='#6B5335';for(let i=0;i<5;i++)ctx.fillRect(x+i*12,y,4,TS);break;
-    case 'path':ctx.fillStyle='#9B8B75';ctx.fillRect(x,y,TS,TS);break;
-    case 'tree':ctx.fillStyle=P.gr1;ctx.fillRect(x,y,TS,TS);
-      if(tile.hp>0){ctx.fillStyle='#5a4030';ctx.fillRect(x+20,y+TS-16,8,16);
-        ctx.fillStyle=P.lf2;ctx.beginPath();ctx.arc(x+24,y+TS-22,16,0,Math.PI*2);ctx.fill();
-        ctx.fillStyle=P.lf;ctx.beginPath();ctx.arc(x+24,y+TS-24,12,0,Math.PI*2);ctx.fill();}
-      else{ctx.fillStyle='#5a4030';ctx.fillRect(x+22,y+TS-10,4,10);}break;
-    case 'rock':ctx.fillStyle=P.gr1;ctx.fillRect(x,y,TS,TS);
-      if(tile.hp>0){ctx.fillStyle=P.st;ctx.beginPath();
-        ctx.moveTo(x+8,y+TS-4);ctx.lineTo(x+14,y+10);ctx.lineTo(x+30,y+8);ctx.lineTo(x+TS-4,y+TS-10);ctx.lineTo(x+28,y+TS-4);ctx.closePath();ctx.fill();
-        ctx.fillStyle=P.st2;ctx.beginPath();ctx.moveTo(x+16,y+16);ctx.lineTo(x+22,y+12);ctx.lineTo(x+28,y+20);ctx.fill();}break;
-    case 'berry':ctx.fillStyle=P.gr1;ctx.fillRect(x,y,TS,TS);ctx.fillStyle='#3a6c2f';ctx.fillRect(x+16,y+20,12,28);
-      ctx.fillStyle='#ff4444';ctx.beginPath();ctx.arc(x+20,y+24,7,0,Math.PI*2);ctx.fill();
-      ctx.fillStyle='#ff5555';ctx.beginPath();ctx.arc(x+28,y+20,6,0,Math.PI*2);ctx.fill();
-      ctx.fillStyle='#ff4444';ctx.beginPath();ctx.arc(x+14,y+26,5,0,Math.PI*2);ctx.fill();break;
-    case 'glitch':const gx2=Math.floor(Math.random()*4);
-      ctx.fillStyle=['#ff00ff','#00ffff','#ffff00','#ff0000'][gx2];ctx.fillRect(x,y,TS/2,TS/2);
-      ctx.fillRect(x+TS/2,y+TS/2,TS/2,TS/2);ctx.fillStyle='#000';ctx.fillRect(x+TS/2,y,TS/2,TS/2);ctx.fillRect(x,y+TS/2,TS/2,TS/2);break;
+    case'grass':ctx.fillStyle=['#3d5a3c','#45633e','#3a5535','#3f5840'][tile.v%4];ctx.fillRect(x,y,T,T);break;
+    case'grass_home':ctx.fillStyle='rgba(52,78,50,.55)';ctx.fillRect(x,y,T,T);break;
+    case'water':ctx.fillStyle='#3a7090';ctx.fillRect(x,y,T,T);const wv=Math.sin((x/T+y/T+FR*.03)*.5)*4;ctx.fillStyle='rgba(100,180,220,.2)';ctx.fillRect(x,y+T/2+wv,T,5);break;
+    case'bridge':ctx.fillStyle='#8B7355';ctx.fillRect(x,y,T+1,T);ctx.fillStyle='#6B5335';for(let i=0;i<5;i++)ctx.fillRect(x+i*12,y,4,T);break;
+    case'path':ctx.fillStyle='#9B8B75';ctx.fillRect(x,y,T,T);break;
+    case'fence':ctx.fillStyle='#5a4030';ctx.fillRect(x+4,y+4,T-8,4);ctx.fillRect(x+4,y+16,T-8,4);ctx.fillRect(x+4,y+8,4,T-16);ctx.fillRect(x+T-8,y+8,4,T-16);break;
+    case'tree':ctx.fillStyle='#3d5a3c';ctx.fillRect(x,y,T,T);ctx.fillStyle='#5a4030';ctx.fillRect(x+22,y+T-12,4,12);ctx.fillStyle='#3a8c3f';ctx.beginPath();ctx.arc(x+24,y+T-20,14,0,Math.PI*2);ctx.fill();ctx.fillStyle='#2d6a2f';ctx.beginPath();ctx.arc(x+24,y+T-22,10,0,Math.PI*2);ctx.fill();break;
+    case'stump':ctx.fillStyle='#3d5a3c';ctx.fillRect(x,y,T,T);ctx.fillStyle='#5a4030';ctx.fillRect(x+22,y+T-8,4,8);break;
+    case'rock':ctx.fillStyle='#3d5a3c';ctx.fillRect(x,y,T,T);ctx.fillStyle='#707070';ctx.beginPath();ctx.moveTo(x+6,y+T-4);ctx.lineTo(x+12,y+8);ctx.lineTo(x+30,y+6);ctx.lineTo(x+40,y+T-8);ctx.lineTo(x+26,y+T-4);ctx.closePath();ctx.fill();ctx.fillStyle='#888';ctx.beginPath();ctx.moveTo(x+16,y+14);ctx.lineTo(x+22,y+10);ctx.lineTo(x+28,y+16);ctx.fill();break;
+    case'rubble':ctx.fillStyle='#3d5a3c';ctx.fillRect(x,y,T,T);ctx.fillStyle='#888';ctx.fillRect(x+16,y+T-8,8,6);ctx.fillRect(x+28,y+T-12,6,4);break;
+    case'berry':ctx.fillStyle='#3d5a3c';ctx.fillRect(x,y,T,T);ctx.fillStyle='#3a6c2f';ctx.fillRect(x+16,y+18,12,26);ctx.fillStyle='#ff4444';ctx.beginPath();ctx.arc(x+20,y+22,6,0,Math.PI*2);ctx.fill();ctx.fillStyle='#ff5555';ctx.beginPath();ctx.arc(x+28,y+20,5,0,Math.PI*2);ctx.fill();break;
+    case'ruins':ctx.fillStyle='#5a5040';ctx.fillRect(x,y,T,T);ctx.fillStyle='#7a6a50';ctx.fillRect(x+4,y+8,T-16,12);ctx.fillRect(x+12,y+4,T-12,T-12);ctx.fillStyle='#6a5a40';ctx.fillRect(x+8,y+12,4,16);break;
+    case'ancient_tree':ctx.fillStyle='#3d5a3c';ctx.fillRect(x,y,T,T);ctx.fillStyle='#5a3a2a';ctx.fillRect(x+16,y+8,16,T-8);ctx.fillStyle='#2d5a2a';ctx.beginPath();ctx.arc(x+24,y+12,20,0,Math.PI*2);ctx.fill();ctx.fillStyle='#3a7030';ctx.beginPath();ctx.arc(x+24,y+10,14,0,Math.PI*2);ctx.fill();break;
   }
 }
 
 function drawEntity(ctx,x,y,e){
   switch(e.type){
-    case 'float_rock':if(!e.alive)return;
-      const fy=Math.sin(FR*0.04+e.phase)*6;
-      ctx.fillStyle='rgba(0,0,0,.15)';ctx.beginPath();ctx.ellipse(x+24,y+TS-6,12,4,0,0,Math.PI*2);ctx.fill();
-      ctx.fillStyle='rgba(255,105,180,.12)';ctx.beginPath();ctx.arc(x+24,y+18+fy,20,0,Math.PI*2);ctx.fill();
-      ctx.fillStyle=P.fp;ctx.beginPath();ctx.moveTo(x+12,y+28+fy);ctx.lineTo(x+6,y+10+fy);ctx.lineTo(x+24,y+6+fy);ctx.lineTo(x+TS-6,y+10+fy);ctx.lineTo(x+TS-8,y+28+fy);ctx.closePath();ctx.fill();
-      ctx.fillStyle=P.fl;ctx.beginPath();ctx.moveTo(x+12,y+14+fy);ctx.lineTo(x+24,y+8+fy);ctx.lineTo(x+34,y+16+fy);ctx.fill();break;
-    case 'walk_tree':if(!e.alive)return;
-      const mx=Math.sin(FR*0.02+e.phase)*3;
-      ctx.fillStyle='rgba(0,0,0,.15)';ctx.beginPath();ctx.ellipse(x+24+mx,y+TS-4,14,5,0,0,Math.PI*2);ctx.fill();
-      ctx.fillStyle=P.wp;ctx.fillRect(x+20+mx,y+TS-18,10,TS-12);
-      ctx.fillStyle=P.wl2;ctx.beginPath();ctx.arc(x+25+mx,y+TS-26,18,0,Math.PI*2);ctx.fill();
-      ctx.fillStyle='rgba(180,140,220,.6)';ctx.beginPath();ctx.arc(x+25+mx,y+TS-18,8,0,Math.PI*2);ctx.fill();break;
-    case 'crystal_snail':if(!e.alive)return;
-      ctx.fillStyle='rgba(0,0,0,.2)';ctx.beginPath();ctx.ellipse(x+24,y+TS-4,10,3,0,0,Math.PI*2);ctx.fill();
-      ctx.fillStyle='#aaccff';ctx.beginPath();ctx.arc(x+24,y+TS-12,16,0,Math.PI*2);ctx.fill();
-      ctx.fillStyle='#cce0ff';ctx.beginPath();ctx.arc(x+22,y+TS-14,10,0,Math.PI*2);ctx.fill();
-      const prism=FR*0.02;
-      for(let i=0;i<3;i++){const a=prism+i*Math.PI*2/3;
-        ctx.fillStyle=`rgba(255,255,255,${0.3+Math.sin(FR*0.05+i)*0.2})`;ctx.beginPath();ctx.arc(x+24+Math.cos(a)*6,y+TS-12+Math.sin(a)*4,3,0,Math.PI*2);ctx.fill();}
-      // Tentacles
-      ctx.strokeStyle='#88aacc';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x+14,y+TS-6);
-      ctx.quadraticCurveTo(x+10,y+TS,Math.cos(FR*0.03)*4+x+12,y+TS+2);ctx.stroke();
-      ctx.beginPath();ctx.moveTo(x+34,y+TS-6);ctx.quadraticCurveTo(x+38,y+TS,Math.cos(FR*0.03+1)*4+x+36,y+TS+2);ctx.stroke();break;
-    case 'memory_jelly':if(!e.alive)return;
-      ctx.fillStyle='rgba(150,200,255,.2)';ctx.beginPath();ctx.arc(x+24,y+24,20,0,Math.PI*2);ctx.fill();
-      ctx.fillStyle='rgba(200,220,255,.4)';ctx.beginPath();ctx.arc(x+24,y+28,8,0,Math.PI);ctx.fill();
-      for(let i=0;i<5;i++){const a=i*Math.PI*2/5+FR*0.02;
-        ctx.fillStyle='rgba(180,210,255,.5)';ctx.beginPath();
-        ctx.moveTo(x+24,y+28);ctx.quadraticCurveTo(x+24+Math.cos(a)*12,y+24+Math.sin(a)*20,x+24+Math.cos(a+0.2)*14,y+36+Math.sin(a+0.2)*20);ctx.fill();}break;
-    case 'mirror_butterfly':if(!e.alive)return;
-      if(!e.butterflies)break;
-      for(const b of e.butterflies){
-        const bx2=x+b.dx*12,by2=y+b.dy*12;
-        ctx.save();ctx.translate(bx2,by2);
-        const flp=Math.sin(FR*0.1+b.ph)*0.5;
-        ctx.fillStyle='rgba(255,255,255,.7)';ctx.beginPath();ctx.ellipse(-3*flp,0,5,3,0,0,Math.PI*2);ctx.fill();
-        ctx.fillStyle='rgba(200,220,255,.4)';ctx.beginPath();ctx.ellipse(3*flp,0,5,3,0,0,Math.PI*2);ctx.fill();
-        ctx.restore();
-      }
-      // Glow
-      ctx.fillStyle='rgba(200,220,255,.1)';ctx.beginPath();ctx.arc(x+24,y+24,24,0,Math.PI*2);ctx.fill();break;
-    case 'void_merchant':if(!e.alive)return;
-      ctx.fillStyle='rgba(0,0,0,.3)';ctx.beginPath();ctx.ellipse(x+24,y+TS-4,12,4,0,0,Math.PI*2);ctx.fill();
-      ctx.fillStyle='#1a1020';ctx.fillRect(x+12,y+4,24,TS-4);
-      ctx.fillStyle='#2a1a30';ctx.beginPath();ctx.moveTo(x+12,y+4);ctx.lineTo(x+36,y+4);ctx.lineTo(x+36,y+12);ctx.lineTo(x+30,y+12);ctx.lineTo(x+24,y);ctx.lineTo(x+18,y+12);ctx.lineTo(x+12,y+12);ctx.closePath();ctx.fill();
-      ctx.fillStyle='rgba(200,180,255,.6)';ctx.fillRect(x+18,y+16,4,4);ctx.fillRect(x+26,y+16,4,4);
-      // Floating items
-      for(let i=0;i<3;i++){ctx.fillStyle=`rgba(200,180,255,${0.2+Math.sin(FR*0.05+i)*0.1})`;ctx.fillRect(x+10+i*12,y+TS-4+Math.sin(FR*0.04+i)*3,8,6);}break;
+    case'float_rock':if(!e.alive)return;const fy=Math.sin(FR*.04+e.phase)*5;
+      ctx.fillStyle='rgba(0,0,0,.12)';ctx.beginPath();ctx.ellipse(x+24,y+T-8,10,3,0,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='rgba(255,105,180,.1)';ctx.beginPath();ctx.arc(x+24,y+20+fy,16,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#9b6fb0';ctx.beginPath();ctx.moveTo(x+10,y+T-4+fy);ctx.lineTo(x+4,y+8+fy);ctx.lineTo(x+24,y+4+fy);ctx.lineTo(x+T-4,y+8+fy);ctx.lineTo(x+T-6,y+T-4+fy);ctx.closePath();ctx.fill();
+      ctx.fillStyle='#c8a0d8';ctx.beginPath();ctx.moveTo(x+12,y+14+fy);ctx.lineTo(x+24,y+8+fy);ctx.lineTo(x+34,y+16+fy);ctx.fill();break;
+    case'walk_tree':if(!e.alive)return;const mx=Math.sin(FR*.02+e.phase)*2;ctx.fillStyle='rgba(0,0,0,.12)';ctx.beginPath();ctx.ellipse(x+24+mx,y+T-4,12,4,0,0,Math.PI*2);ctx.fill();ctx.fillStyle='#6b3fa0';ctx.fillRect(x+20+mx,y+T-14,8,T-18);ctx.fillStyle='#a070d0';ctx.beginPath();ctx.arc(x+24+mx,y+T-22,15,0,Math.PI*2);ctx.fill();ctx.fillStyle='rgba(180,140,220,.5)';ctx.beginPath();ctx.arc(x+24+mx,y+T-14,6,0,Math.PI*2);ctx.fill();break;
+    case'crystal_snail':if(!e.alive)return;ctx.fillStyle='rgba(0,0,0,.15)';ctx.beginPath();ctx.ellipse(x+24,y+T-4,8,3,0,0,Math.PI*2);ctx.fill();ctx.fillStyle='#aaccff';ctx.beginPath();ctx.arc(x+24,y+T-10,14,0,Math.PI*2);ctx.fill();ctx.fillStyle='#cce0ff';ctx.beginPath();ctx.arc(x+22,y+T-12,8,0,Math.PI*2);ctx.fill();for(let i=0;i<3;i++){ctx.fillStyle=`rgba(255,255,255,${.2+Math.sin(FR*.05+i)*.15})`;ctx.beginPath();ctx.arc(x+24+Math.cos(FR*.02+i*2)*5,y+T-10+Math.sin(FR*.03+i)*3,3,0,Math.PI*2);ctx.fill();}break;
+    case'memory_jelly':if(!e.alive)return;ctx.fillStyle='rgba(150,200,255,.15)';ctx.beginPath();ctx.arc(x+24,y+24,18,0,Math.PI*2);ctx.fill();ctx.fillStyle='rgba(200,220,255,.3)';ctx.beginPath();ctx.arc(x+24,y+26,6,0,Math.PI);ctx.fill();for(let i=0;i<4;i++){const a=i*Math.PI*2/4+FR*.02;ctx.fillStyle='rgba(180,210,255,.4)';ctx.beginPath();ctx.moveTo(x+24,y+26);ctx.quadraticCurveTo(x+24+Math.cos(a)*10,y+22+Math.sin(a)*16,x+24+Math.cos(a+.2)*12,y+32+Math.sin(a+.2)*16);ctx.fill();}break;
+    case'mirror_butterfly':if(!e.alive)return;const n=e.bfly||6;for(let i=0;i<n;i++){const bX=x+24+Math.cos(FR*.03+i*1.2)*16,bY=y+24+Math.sin(FR*.04+i)*12;const flp=Math.sin(FR*.08+i)*.4;ctx.fillStyle='rgba(255,255,255,.6)';ctx.beginPath();ctx.ellipse(bX-3*flp,bY,4,3,0,0,Math.PI*2);ctx.fill();ctx.fillStyle='rgba(200,220,255,.3)';ctx.beginPath();ctx.ellipse(bX+3*flp,bY,4,3,0,0,Math.PI*2);ctx.fill();}break;
+    case'void_merchant':if(!e.alive)return;ctx.fillStyle='rgba(0,0,0,.25)';ctx.beginPath();ctx.ellipse(x+24,y+T-4,10,3,0,0,Math.PI*2);ctx.fill();ctx.fillStyle='#1a1020';ctx.fillRect(x+14,y+6,20,T-6);ctx.fillStyle='#2a1a30';ctx.beginPath();ctx.moveTo(x+14,y+6);ctx.lineTo(x+34,y+6);ctx.lineTo(x+34,y+12);ctx.lineTo(x+29,y+12);ctx.lineTo(x+24,y);ctx.lineTo(x+19,y+12);ctx.lineTo(x+14,y+12);ctx.closePath();ctx.fill();ctx.fillStyle='rgba(200,180,255,.5)';ctx.fillRect(x+18,y+16,3,3);ctx.fillRect(x+26,y+16,3,3);break;
   }
 }
 
-function drawBuilding(ctx,x,y,type){
-  ctx.fillStyle='rgba(0,0,0,.2)';ctx.beginPath();ctx.ellipse(x+24,y+TS-2,14,5,0,0,Math.PI*2);ctx.fill();
-  switch(type){
-    case 'hut':ctx.fillStyle=P.wl;ctx.fillRect(x+6,y+14,TS-12,TS-14);
-      ctx.strokeStyle='#6B5335';ctx.lineWidth=1;ctx.strokeRect(x+6,y+14,TS-12,TS-14);
-      ctx.fillStyle=P.rf;ctx.beginPath();ctx.moveTo(x+2,y+14);ctx.lineTo(x+24,y-4);ctx.lineTo(x+TS-2,y+14);ctx.closePath();ctx.fill();
-      ctx.fillStyle='#4a2810';ctx.fillRect(x+18,y+24,12,TS-24);
-      ctx.fillStyle=GS.tod==='night'?'rgba(255,200,100,.4)':'#aaddff';ctx.fillRect(x+8,y+18,8,8);break;
-    case 'storage':ctx.fillStyle='#a08060';ctx.fillRect(x+6,y+14,TS-12,TS-14);
-      ctx.strokeStyle='#6B5335';ctx.strokeRect(x+6,y+14,TS-12,TS-14);
-      ctx.fillStyle='#b89070';ctx.fillRect(x+4,y+10,TS-8,8);
-      ctx.fillStyle='#666';ctx.fillRect(x+8,y+22,TS-16,3);ctx.fillRect(x+8,y+34,TS-16,3);break;
-    case 'craft':ctx.fillStyle='#8a7a60';ctx.fillRect(x+6,y+14,TS-12,TS-14);
-      ctx.fillStyle='#6a5a40';ctx.fillRect(x+6,y+12,TS-12,4);
-      ctx.fillStyle='#4a3a20';ctx.fillRect(x+10,y+18,6,TS-22);ctx.fillRect(x+32,y+18,6,TS-22);break;
-    case 'furnace':ctx.fillStyle='#706050';ctx.fillRect(x+6,y+10,TS-12,TS-18);
-      ctx.fillStyle='#403020';ctx.fillRect(x+10,y+6,TS-20,8);
-      ctx.fillStyle='#ff6600';ctx.beginPath();ctx.arc(x+24,y+TS-8,6,0,Math.PI*2);ctx.fill();
-      ctx.fillStyle='#ffaa00';ctx.beginPath();ctx.arc(x+24,y+TS-9,3,0,Math.PI*2);ctx.fill();break;
-    case 'garden':ctx.fillStyle='#4a6030';ctx.fillRect(x+4,y+20,TS-8,TS-12);
-      ctx.strokeStyle='#5a4030';ctx.strokeRect(x+4,y+20,TS-8,TS-12);
-      for(let r=0;r<2;r++)for(let c=0;c<2;c++){
-        ctx.fillStyle='#5a4020';ctx.fillRect(x+8+c*18,y+24+r*14,12,10);
-        ctx.fillStyle='#4a8a3a';ctx.fillRect(x+10+c*18,y+26+r*14,2,4);}break;
-    case 'watch':ctx.fillStyle='#807060';ctx.fillRect(x+10,y+12,TS-20,TS-12);
-      ctx.fillStyle='#605040';ctx.fillRect(x+10,y+8,TS-20,6);
-      ctx.fillStyle='#aaddff';ctx.beginPath();ctx.arc(x+24,y+8,6,0,Math.PI*2);ctx.fill();
-      ctx.strokeStyle='#605040';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x+24,y+4);ctx.lineTo(x+24,y-8);ctx.stroke();break;
+function drawBuilding(ctx,x,y,id){
+  ctx.fillStyle='rgba(0,0,0,.15)';ctx.beginPath();ctx.ellipse(x+24,y+T-2,10,4,0,0,Math.PI*2);ctx.fill();
+  switch(id){
+    case'hut':ctx.fillStyle='#c4956a';ctx.fillRect(x+6,y+14,T-12,T-14);ctx.strokeStyle='#6B5335';ctx.strokeRect(x+6,y+14,T-12,T-14);ctx.fillStyle='#b33a30';ctx.beginPath();ctx.moveTo(x+2,y+14);ctx.lineTo(x+24,y-2);ctx.lineTo(x+T-2,y+14);ctx.closePath();ctx.fill();ctx.fillStyle='#4a2810';ctx.fillRect(x+18,y+24,12,T-24);break;
+    case'storage':ctx.fillStyle='#a08060';ctx.fillRect(x+6,y+14,T-12,T-14);ctx.strokeStyle='#6B5335';ctx.strokeRect(x+6,y+14,T-12,T-14);ctx.fillStyle='#b89070';ctx.fillRect(x+4,y+10,T-8,8);ctx.fillStyle='#666';ctx.fillRect(x+8,y+22,T-16,3);ctx.fillRect(x+8,y+34,T-16,3);break;
+    case'craft':ctx.fillStyle='#8a7a60';ctx.fillRect(x+6,y+14,T-12,T-14);ctx.fillStyle='#6a5a40';ctx.fillRect(x+6,y+12,T-12,4);ctx.fillStyle='#4a3a20';ctx.fillRect(x+10,y+18,4,T-22);ctx.fillRect(x+34,y+18,4,T-22);break;
+    case'furnace':ctx.fillStyle='#706050';ctx.fillRect(x+6,y+12,T-12,T-14);ctx.fillStyle='#403020';ctx.fillRect(x+10,y+8,T-20,6);ctx.fillStyle='#ff6600';ctx.beginPath();ctx.arc(x+24,y+T-4,5,0,Math.PI*2);ctx.fill();ctx.fillStyle='#ffaa00';ctx.beginPath();ctx.arc(x+24,y+T-5,3,0,Math.PI*2);ctx.fill();break;
+    case'garden':ctx.fillStyle='#4a6030';ctx.fillRect(x+4,y+18,T-8,T-12);ctx.strokeStyle='#5a4030';ctx.strokeRect(x+4,y+18,T-8,T-12);for(let r=0;r<2;r++)for(let c=0;c<2;c++){ctx.fillStyle='#5a4020';ctx.fillRect(x+8+c*18,y+22+r*12,10,8);ctx.fillStyle='#4a8a3a';ctx.fillRect(x+10+c*18,y+24+r*12,2,3);}break;
+    case'watch':ctx.fillStyle='#807060';ctx.fillRect(x+10,y+14,T-20,T-10);ctx.fillStyle='#605040';ctx.fillRect(x+10,y+8,T-20,8);ctx.fillStyle='#aaddff';ctx.beginPath();ctx.arc(x+24,y+6,6,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#605040';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x+24,y+2);ctx.lineTo(x+24,y-8);ctx.stroke();break;
   }
 }
 
 function drawPlayer(ctx,x,y){
-  // Shadow
-  ctx.fillStyle='rgba(0,0,0,.2)';ctx.beginPath();ctx.ellipse(x+24,y+TS-2,10,3,0,0,Math.PI*2);ctx.fill();
-  // Legs + shoes
-  ctx.fillStyle='#5a4020';ctx.fillRect(x+10,y+TS-14,10,14);ctx.fillRect(x+28,y+TS-14,10,14);
-  ctx.fillStyle='#3a2810';ctx.fillRect(x+10,y+TS-4,10,4);ctx.fillRect(x+28,y+TS-4,10,4);
-  // Body
-  ctx.fillStyle='#4488cc';ctx.fillRect(x+6,y+14,TS-12,TS-28);
-  // Arms
-  ctx.fillStyle=P.sk;ctx.fillRect(x+2,y+18,6,TS-26);ctx.fillRect(x+TS-8,y+18,6,TS-26);
-  // Head
-  ctx.fillStyle=P.sk;ctx.fillRect(x+10,y+2,TS-20,16);
-  // Hair
-  ctx.fillStyle=P.hr;ctx.fillRect(x+8,y,TS-16,8);
-  // Eyes
-  ctx.fillStyle='#000';ctx.fillRect(x+14,y+8,4,3);ctx.fillRect(x+30,y+8,4,3);
-  // Trait: glowing fingertips
-  if(GS.traits.includes('蓝荧之触')){
-    ctx.fillStyle='rgba(120,170,255,.5)';ctx.fillRect(x+1,y+TS-14,5,4);ctx.fillRect(x+TS-6,y+TS-14,5,4);
-  }
+  ctx.fillStyle='rgba(0,0,0,.15)';ctx.beginPath();ctx.ellipse(x+24,y+T-2,8,3,0,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#5a4020';ctx.fillRect(x+12,y+T-12,8,12);ctx.fillRect(x+28,y+T-12,8,12);
+  ctx.fillStyle='#3a2810';ctx.fillRect(x+12,y+T-4,8,4);ctx.fillRect(x+28,y+T-4,8,4);
+  ctx.fillStyle='#4488cc';ctx.fillRect(x+8,y+14,T-16,T-26);
+  ctx.fillStyle='#f0c8a0';ctx.fillRect(x+4,y+18,6,T-24);ctx.fillRect(x+T-10,y+18,6,T-24);
+  ctx.fillStyle='#f0c8a0';ctx.fillRect(x+10,y+4,T-20,14);
+  ctx.fillStyle='#4a2810';ctx.fillRect(x+8,y+2,T-16,6);
+  ctx.fillStyle='#000';ctx.fillRect(x+16,y+8,3,2);ctx.fillRect(x+28,y+8,3,2);
+  if(GS.traits.includes('蓝荧之触')){ctx.fillStyle='rgba(120,170,255,.4)';ctx.fillRect(x+2,y+T-14,5,4);ctx.fillRect(x+T-7,y+T-14,5,4);}
 }
 
 function drawLily(ctx,x,y){
-  ctx.fillStyle='rgba(0,0,0,.2)';ctx.beginPath();ctx.ellipse(x+24,y+TS-2,8,3,0,0,Math.PI*2);ctx.fill();
-  ctx.fillStyle='#3a2a10';ctx.fillRect(x+12,y+TS-14,8,14);ctx.fillRect(x+28,y+TS-14,8,14);
-  ctx.fillStyle=P.eg;ctx.fillRect(x+8,y+14,TS-16,TS-26);
-  ctx.fillStyle=P.sk;ctx.fillRect(x+10,y+4,TS-20,14);
-  ctx.fillStyle=P.sv;ctx.fillRect(x+6,y,TS-12,8);ctx.fillRect(x+4,y+4,4,8);ctx.fillRect(x+TS-8,y+4,4,8);
-  ctx.fillStyle='#2a5a2a';ctx.fillRect(x+16,y+8,3,3);ctx.fillRect(x+28,y+8,3,3);
-  ctx.fillStyle=P.sk;ctx.fillRect(x+3,y+6,4,8);ctx.fillRect(x+TS-7,y+6,4,8);
+  ctx.fillStyle='rgba(0,0,0,.15)';ctx.beginPath();ctx.ellipse(x+24,y+T-2,7,3,0,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#3a2810';ctx.fillRect(x+14,y+T-12,6,12);ctx.fillRect(x+28,y+T-12,6,12);
+  ctx.fillStyle='#3a8c40';ctx.fillRect(x+8,y+14,T-16,T-24);
+  ctx.fillStyle='#f0c8a0';ctx.fillRect(x+10,y+4,T-20,12);
+  ctx.fillStyle='#c0c0d0';ctx.fillRect(x+6,y+2,T-12,7);ctx.fillRect(x+3,y+5,5,7);ctx.fillRect(x+T-8,y+5,5,7);
+  ctx.fillStyle='#2a5a2a';ctx.fillRect(x+16,y+8,2,2);ctx.fillRect(x+28,y+8,2,2);
+  ctx.fillStyle='#f0c8a0';ctx.fillRect(x+3,y+7,3,6);ctx.fillRect(x+T-6,y+7,3,6);
 }
 
-// ─── GAME LOOP ───
-function loop(){
-  update();render();requestAnimationFrame(loop);
-}
+// ═══════════════ UPDATE ═══════════════
+function update(){
+  // Movement
+  let mx=0,my=0;
+  if(touchOn){mx=touchDX;my=touchDY;}
+  if(held['ArrowUp']||held['w']){my=-1;touchOn=false;}
+  if(held['ArrowDown']||held['s']){my=1;touchOn=false;}
+  if(held['ArrowLeft']||held['a']){mx=-1;touchOn=false;}
+  if(held['ArrowRight']||held['d']){mx=1;touchOn=false;}
 
-// ─── SAVE/LOAD ───
-function save(){localStorage.setItem('isekai_v5',JSON.stringify({day:GS.day,tod:GS.tod,res:GS.res,traits:GS.traits,disc:GS.disc,journal:GS.journal,flags:GS.flags,lilyAff:GS.lilyAff,lilyTalks:GS.lilyTalks,expCompleted:GS.expCompleted,builtSet,player:{x:player.x,y:player.y}}));}
-function load(){const r=localStorage.getItem('isekai_v5');if(!r)return false;try{const d=JSON.parse(r);
-  Object.assign(GS,{...GS,day:d.day,tod:d.tod,res:d.res,traits:d.traits,disc:d.disc,journal:d.journal,flags:d.flags,lilyAff:d.lilyAff||0,lilyTalks:d.lilyTalks||0,expCompleted:d.expCompleted||[]});
-  builtSet=d.builtSet||['hut'];buildings=d.builtSet?d.builtSet.map(t=>({type:t,x:27+buildings.length,y:28})):[{type:'hut',x:27,y:25}];
-  if(d.player){player.x=d.player.x;player.y=d.player.y;}
-  save();return true;}catch(e){return false;}
-}
+  if(mx!==0||my!==0){
+    const len=Math.hypot(mx,my);mx/=len;my/=len;
+    if(Math.abs(mx)>Math.abs(my))player.dir=mx>0?1:3;
+    else player.dir=my>0?2:0;
+    let nx=player.x+mx*playerSpeed()*0.016,ny=player.y+my*playerSpeed()*0.016;
+    // Collision
+    const map=MAPS[curScreen];if(map){
+      const m=0.22;
+      for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){
+        const tx=Math.floor(nx+dx*m),ty=Math.floor(ny+dy*m);
+        if(tx<0||tx>=map.w||ty<0||ty>=map.h)continue;
+        const tile=map.grid[ty][tx];
+        if(['tree','water','fence','ruins','ancient_tree'].includes(tile.t)||(tile.t==='stump'&&Math.abs(nx+dx*m-(tx+.5))<.3&&Math.abs(ny+dy*m-(ty+.5))<.3)){
+          const cx=tx+.5,cy=ty+.5;
+          if(Math.abs(nx+dx*m-cx)<.35&&Math.abs(ny+dy*m-cy)<.35){
+            if(Math.abs(nx-cx)<Math.abs(ny-cy))ny=cy+Math.sign(ny-cy)*.38;
+            else nx=cx+Math.sign(nx-cx)*.38;
+          }
+        }
+      }
+      // Building collision
+      if(curScreen==='home')for(const id of GS.built){const pos=bldgPositions[id];if(!pos)continue;const bx=pos[0]+.5,by=pos[1]+.5;if(Math.abs(nx-bx)<.3&&Math.abs(ny-by)<.3){if(Math.abs(nx-bx)<Math.abs(ny-by))ny=by+Math.sign(ny-by)*.32;else nx=bx+Math.sign(nx-bx)*.32;}}
+    }
+    player.x=Math.max(.3,Math.min((map?.w||99)-.3,nx));
+    player.y=Math.max(.3,Math.min((map?.h||99)-.3,ny));
+  }
 
-// ─── BOOT ───
-genWorld();
+  // Time
+  GS.todTimer++;if(GS.todTimer>GS.dayFrames){GS.todTimer=0;const cycle=['morning','day','dusk','night'];GS.tod=cycle[(cycle.indexOf(GS.tod)+1)%4];if(GS.tod==='morning'){GS.day++;if(!GS.flags.dreamHad&&GS.day>=2){GS.flags.dreamHad=true;GS.flags.firstChange=true;GS.traits.push('蓝荧之触');lilySay('你的手...在发光？和月露草一样！');}}}
+  // Bubbles
+  if(lbTimer>0)lbTimer--;if(lbTimer<=0)lilyBubble=null;
+  if(htTimer>0)htTimer--;if(htTimer<=0)hintText=null;
+  // Particles
+  particles=particles.filter(p=>{p.x+=p.vx;p.y+=p.vy;p.life--;return p.life>0;});
+  ftexts=ftexts.filter(t=>{t.life--;t.y-=.3;return t.life>0;});
+  FR++;
+}
+function playerSpeed(){return 4.5;}
+
+// ═══════════════ INPUT ═══════════════
+const gcEl=document.getElementById('c');
+gcEl.addEventListener('touchstart',e=>{e.preventDefault();if(e.touches.length===1){touchId=e.touches[0].identifier;touchOn=true;touchDX=0;touchDY=0;}});
+gcEl.addEventListener('touchmove',e=>{e.preventDefault();if(touchId===null)return;const t=Array.from(e.touches).find(t=>t.identifier===touchId);if(!t)return;touchDX=t.clientX/gcEl.clientWidth*2-1;touchDY=t.clientY/gcEl.clientHeight*2-1;const d=Math.hypot(touchDX,touchDY);if(d<.2){touchDX=0;touchDY=0;}});
+gcEl.addEventListener('touchend',e=>{
+  e.preventDefault();
+  if(!touchOn||Math.hypot(touchDX,touchDY)<.15){interact();} // tap = interact
+  touchOn=false;touchDX=0;touchDY=0;touchId=null;
+});
+gcEl.addEventListener('mousedown',e=>{touchDX=(e.clientX/gcEl.clientWidth)*2-1;touchDY=(e.clientY/gcEl.clientHeight)*2-1;touchOn=true;});
+gcEl.addEventListener('mousemove',e=>{if(!touchOn)return;touchDX=(e.clientX/gcEl.clientWidth)*2-1;touchDY=(e.clientY/gcEl.clientHeight)*2-1;});
+gcEl.addEventListener('mouseup',e=>{if(Math.hypot(touchDX,touchDY)<.15)interact();touchOn=false;touchDX=0;touchDY=0;});
+window.addEventListener('keydown',e=>{held[e.key]=true;if(e.key===' '||e.key==='e')interact();if(e.key==='b'){const bids=Object.keys(BLD).filter(id=>canBuild(id));if(bids.length>0)doBuild(bids[0]);}e.preventDefault();});
+window.addEventListener('keyup',e=>{held[e.key]=false;});
+
+// ═══════════════ SAVE/LOAD ═══════════════
+function save(){localStorage.setItem('isekai_v6',JSON.stringify({day:GS.day,tod:GS.tod,R,traits:GS.traits,disc:GS.disc,journal:GS.journal,flags:GS.flags,built:GS.built,expDone:GS.expDone,player:{x:player.x,y:player.y},screen:curScreen}));}
+function load(){const r=localStorage.getItem('isekai_v6');if(!r)return false;try{const d=JSON.parse(r);Object.assign(GS,{...GS,day:d.day,tod:d.tod,flags:d.flags||{}});Object.assign(R,d.R);GS.traits=d.traits||[];GS.disc=d.disc||[];GS.journal=d.journal||[];GS.built=d.built||['hut'];GS.expDone=d.expDone||{};player.x=d.player?.x||10;player.y=d.player?.y||10;curScreen=d.screen||'home';save();return true;}catch(e){return false;}finally{save();}}
+
+// ═══════════════ BOOT ═══════════════
 if(!load()){
-  playerSay('这是...哪里？','#ffd700');
-  GS.journal.push('在一个陌生的世界醒来。有一个精灵少女说这里是"边缘之地"。');
+  curScreen='home';player.x=8;player.y=6;GS.built=['hut'];
+  setTimeout(()=>{lilySay('你醒了！我是莉莉。往东走——那些浮游石在等你！');hint('→ 走到地图右边缘 出发去东部荒野！',300);},600);
 }
-setInterval(save,10000);
-loop();
+function loop(){update();draw();requestAnimationFrame(loop);}
+setInterval(save,8000);loop();
 </script></body></html>
