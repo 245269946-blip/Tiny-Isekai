@@ -1,482 +1,685 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
-<title>异世界开拓者 · 边缘之地</title>
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no,maximum-scale=1">
+<title>异世界开拓者</title>
 <style>
-:root{--bg:#1a1410;--p:#2a1f18;--g:#c8a45c;--t:#e8dcc8;--a:#5a9e6f;--r:#c44;--m:#9b6fb0;--w:#6ab0d0}
 *{margin:0;padding:0;box-sizing:border-box}
-body{background:var(--bg);color:var(--t);font-family:'Noto Sans SC','PingFang SC','Microsoft YaHei',sans-serif;overflow:hidden;height:100dvh;touch-action:manipulation;user-select:none}
-#app{display:flex;flex-direction:column;height:100dvh;max-width:900px;margin:0 auto}
-#topbar{display:flex;align-items:center;justify-content:space-between;padding:6px 14px;background:linear-gradient(180deg,#2a1f18,#1f1810);border-bottom:1px solid #3a2a1a;font-size:12px;gap:8px;flex-shrink:0;min-height:36px}
-#topbar>*{white-space:nowrap}
-.tb-chapter{color:var(--g);font-weight:700;font-size:13px}
-.tb-mid{display:flex;gap:16px;color:#aaa;font-size:11px}
-.tb-res{display:flex;gap:8px;font-size:11px}
-.tb-res span{display:flex;align-items:center;gap:2px}
-.tb-res .r-icon{font-size:14px}
-#gameview{flex:1;position:relative;overflow:hidden;min-height:0;background:var(--bg)}
-#gameview canvas{display:block;width:100%;height:100%}
-#bottombar{display:flex;justify-content:space-around;padding:4px 0;background:linear-gradient(0deg,#2a1f18,#1f1810);border-top:1px solid #3a2a1a;flex-shrink:0}
-#bottombar button{flex:1;padding:8px 4px;background:none;border:none;color:#777;font-size:12px;cursor:pointer;transition:.2s;display:flex;flex-direction:column;align-items:center;gap:2px;position:relative}
-#bottombar button .bicon{font-size:18px}
-#bottombar button.active{color:var(--g)}
-#bottombar button.active::after{content:'';position:absolute;top:0;left:25%;right:25%;height:2px;background:var(--g);border-radius:1px}
-#bottombar button:active{background:rgba(200,164,92,.1)}
-.badge{position:absolute;top:2px;right:6px;background:var(--r);color:#fff;font-size:9px;padding:1px 5px;border-radius:8px;min-width:16px;text-align:center}
-#dlg-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.75);display:none;z-index:100;justify-content:center;align-items:flex-end;padding:0 16px 80px}
-#dlg-overlay.show{display:flex}
-#dlg-box{background:linear-gradient(180deg,#2a1f18,#1f1810);border:1px solid var(--g);border-radius:12px;padding:24px 20px 20px;max-width:520px;width:100%;max-height:70vh;overflow-y:auto;box-shadow:0 4px 24px rgba(0,0,0,.5)}
-#dlg-box .d-portrait{width:52px;height:52px;margin:-42px auto 10px;border-radius:50%;border:2px solid var(--g);display:flex;align-items:center;justify-content:center;font-size:28px;background:var(--p)}
-#dlg-box .d-speaker{color:var(--g);font-weight:700;text-align:center;margin-bottom:6px;font-size:14px}
-#dlg-box .d-text{line-height:1.8;margin-bottom:14px;font-size:14px;color:var(--t)}
-#dlg-box .d-choices{display:flex;flex-direction:column;gap:7px}
-#dlg-box .d-choices button{width:100%;padding:12px 14px;background:rgba(200,164,92,.06);border:1px solid rgba(200,164,92,.25);color:var(--t);border-radius:8px;font-size:13px;cursor:pointer;text-align:left;transition:.2s;line-height:1.5}
-#dlg-box .d-choices button:hover{background:rgba(200,164,92,.15);border-color:var(--g)}
-#dlg-box .d-choices button:disabled{opacity:.4;cursor:not-allowed}
-#dlg-box .d-choices button small{display:block;color:#888;font-size:11px;margin-top:2px}
-#dlg-box .d-btn{padding:10px 28px;background:var(--g);border:none;color:#1a1410;border-radius:8px;font-size:13px;cursor:pointer;font-weight:700;margin:0 auto;display:block}
-#dlg-box h3{color:var(--g);margin-bottom:10px;font-size:15px}
-#dlg-box .j-item,.d-item{background:rgba(200,164,92,.05);padding:8px 10px;margin-bottom:5px;border-radius:6px;font-size:12px;line-height:1.6;border-left:2px solid rgba(200,164,92,.2)}
-#announce{position:fixed;top:18%;left:50%;transform:translate(-50%,-50%);color:var(--g);font-size:16px;text-align:center;text-shadow:0 2px 8px rgba(0,0,0,.8);pointer-events:none;z-index:50;opacity:0;transition:opacity .4s;white-space:nowrap}
-#announce.show{opacity:1}
-#hint{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);color:rgba(200,164,92,.7);font-size:11px;pointer-events:none;z-index:10;opacity:0;transition:opacity .5s}
-#hint.show{opacity:1;animation:pulse 2s infinite}@keyframes pulse{0%,100%{opacity:.4}50%{opacity:.8}}
-#toast{position:fixed;top:50px;left:50%;transform:translateX(-50%);pointer-events:none;z-index:60}
-.toast-item{background:var(--p);border:1px solid var(--g);color:var(--g);padding:6px 16px;border-radius:16px;font-size:12px;margin-bottom:4px;animation:toastIn .3s ease-out,toastOut .3s 2s ease-in forwards;text-align:center}
-@keyframes toastIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
-@keyframes toastOut{from{opacity:1}to{opacity:0}}
-@media(max-width:600px){
- #topbar{font-size:10px;padding:4px 8px;gap:4px}.tb-chapter{font-size:11px}.tb-mid{font-size:10px;gap:8px}.tb-res{font-size:10px;gap:4px}
- #dlg-box{padding:18px 14px 16px;max-width:95%}#dlg-box .d-text{font-size:13px}#dlg-box .d-choices button{font-size:12px;padding:10px}
- #bottombar button{font-size:10px;padding:6px 2px}#bottombar button .bicon{font-size:16px}
-}
+body{background:#111;overflow:hidden;height:100dvh;width:100vw;touch-action:none;user-select:none;-webkit-user-select:none;font-family:'Noto Sans SC','PingFang SC',system-ui,sans-serif}
+#gc{display:block;width:100%;height:100%}
 </style></head><body>
-<div id="app">
-<div id="topbar">
-<span class="tb-chapter" id="t_chapter">序幕·苏醒</span>
-<div class="tb-mid">
-<span><span id="t_tod">☀️</span> <span id="t_day">第1天</span></span>
-<span id="t_loc">未知荒野</span>
-</div>
-<div class="tb-res">
-<span><span class="r-icon">🪵</span><span id="r_wood">0</span></span>
-<span><span class="r-icon">🪨</span><span id="r_stone">0</span></span>
-<span><span class="r-icon">✨</span><span id="r_star">0</span></span>
-<span><span class="r-icon">🌿</span><span id="r_herb">0</span></span>
-</div>
-</div>
-<div id="gameview"><canvas id="gc"></canvas></div>
-<div id="bottombar">
-<button id="btn_home" class="active" onclick="GM.mode('home')"><span class="bicon">🏠</span>家园</button>
-<button id="btn_exp" onclick="GM.mode('exp')"><span class="bicon">🗺️</span>远征</button>
-<button id="btn_best" onclick="GM.panel('bestiary')"><span class="bicon">📖</span>图鉴</button>
-<button id="btn_log" onclick="GM.panel('journal')"><span class="bicon">📜</span>日志</button>
-<button id="btn_build" onclick="GM.panel('build')"><span class="bicon">🏗️</span>建造</button>
-</div>
-</div>
-<div id="dlg-overlay"><div id="dlg-box"></div></div>
-<div id="announce"></div>
-<div id="hint"></div>
-<div id="toast"></div>
+<canvas id="gc"></canvas>
 <script>
-// ╔══════════════════════════════════════════╗
-// ║  异世界开拓者 · 边缘之地  v4 Release   ║
-// ╚══════════════════════════════════════════╝
-const T=40; let W,H,FR=0,TOASTS=[];
-const PAL={bg:'#1a1410',pn:'#2a1f18',gd:'#c8a45c',tx:'#e8dcc8',gr1:'#3d5a3c',gr2:'#45633e',gr3:'#3a5535',dt:'#6b5340',pt:'#8a7355',wd:'#8b6914',wd2:'#a07830',st:'#707070',st2:'#888',wt:'#3a7090',wt2:'#5a90b0',rf:'#b33a30',wl:'#c4956a',lf:'#2d6a2f',lf2:'#3a8c3f',sk:'#f0c8a0',sk2:'#e0b080',hr:'#4a2810',sv:'#c0c0d0',eg:'#3a8c40',fp:'#9b6fb0',fl:'#c8a0d8',wp:'#6b3fa0',wl2:'#a070d0',pink:'#ff69b4',rnb:'#6ab0d0'};
+// ╔══════════════════════════════════════════════════════╗
+// ║  异世界开拓者 v5  —  行走·发现·建造·变化           ║
+// ╚══════════════════════════════════════════════════════╝
+const TS=48; // tile size in logical pixels
+let W,H,SCALE=1,CX=0,CY=0,FR=0;
+let held={},touchDir=null,touchStart=null;
 
-// ═══════════════════ STATE ═══════════════════
-const GS={mode:'home',chapter:'prologue',day:1,tod:'morning',res:{wood:0,stone:0,starshard:0,herb:0,plank:0,ironOre:0,ironIngot:0,crystal:0,starDew:0},bldgs:['hut'],traits:[],disc:[],journal:[],exp:{active:false,dir:null,node:0,completed:[]},flags:{tut:false,firstExp:false,firstNight:false,dreamHad:false,firstChange:false,builtStorage:false,lilyChat2:false,ch1Unlock:false,metVoid:false},paths:{lilyTalks:0},blocked:false};
-
-// ═══════════════════ DATA ═══════════════════
-const BUILDINGS={hut:{name:'小屋',icon:'🏠',cost:{},desc:'你的家。睡觉和存档的地方。'},storage:{name:'仓库',icon:'📦',cost:{wood:3,stone:2},desc:'存放远征带回的资源。'},craft:{name:'工具台',icon:'🔨',cost:{wood:5,stone:3},desc:'制作木板和工具。'},furnace:{name:'熔炉',icon:'🔥',cost:{stone:5,ironOre:3},desc:'冶炼铁矿，制作铁锭。需先发现铁矿。'},garden:{name:'奇异菜园',icon:'🌱',cost:{wood:3,herb:2},desc:'种植奇异作物。首次远征后解锁。'},watch:{name:'观星台',icon:'🔭',cost:{wood:10,stone:6,starshard:2},desc:'观测星象，发现新的远征方向。\n建成后解锁第一章。'}};
-
-const EXPEDITIONS={
-  prologue_east:{name:'东部荒野',unlock:null,nodes:[
-    {t:'event',e:'float_rock',l:'?'},{t:'event',e:'talking_berry',l:'?'},{t:'event',e:'walk_tree',l:'?'},{t:'return',l:'🏠'}],
-    reward:{wood:4,stone:2,starshard:1,herb:3},story:['浮游石——这个世界的基本法则不一样','有一个只对我说话的声音...它是谁？','漫步树似乎认识前领主']},
-  prologue_south:{name:'南部溪谷',unlock:'firstExp',nodes:[
-    {t:'event',e:'crystal_snail',l:'?'},{t:'event',e:'old_ruins',l:'?'},{t:'event',e:'memory_pool',l:'?'},{t:'return',l:'🏠'}],
-    reward:{wood:2,stone:3,ironOre:2,herb:2},story:['晶壳蜗牛在传递某种信息','前任领主的笔记散落在废墟中','记忆水母——触碰后看到了不该看的东西']},
-  chapter1_deep:{name:'漫步森林深处',unlock:'ch1',nodes:[
-    {t:'event',e:'mirror_swarm',l:'?'},{t:'event',e:'void_merchant',l:'?'},{t:'event',e:'forest_heart',l:'?'},{t:'return',l:'🏠'}],
-    reward:{wood:5,starshard:3,crystal:2},story:['镜面蝶群倒映着过去','虚空商贩——交易不需要语言','森林的中心有一个意识在呼吸']},
+// ─── PALETTE ───
+const P={
+  gr1:'#3d5a3c',gr2:'#45633e',gr3:'#3a5535',
+  dt:'#6b5340',pt:'#8a7355',wd:'#8b6914',
+  st:'#707070',st2:'#888',wt:'#3a7090',wt2:'#5a90b0',
+  rf:'#b33a30',wl:'#c4956a',sk:'#f0c8a0',hr:'#4a2810',
+  sv:'#c0c0d0',eg:'#3a8c40',fp:'#9b6fb0',fl:'#c8a0d8',
+  wp:'#6b3fa0',pink:'#ff69b4',gd:'#c8a45c',
 };
 
-const EVENTS={
-  float_rock:{title:'浮游岩群',scene:'float_rock',text:`前方草地中，十几块岩石悬浮在半人高的空中。它们缓缓起伏，表面泛着微弱的粉色光芒——像在呼吸。
+// ─── WORLD ───
+const MW=80,MH=60;
+let worldTiles=[],worldEnts=[];
 
-你靠近时，它们微微向你倾斜。像是在...观察？`,choices:[
-    {text:'冲过去采集',a:'collect',res:{starshard:2,stone:1},disc:'浮游岩群 — 会呼吸的石头，似乎能感知到人',jrnl:'发现浮游岩。这些石头不像死物——它们有某种感知力。莉莉说它们会记住触碰过的人。',txt:'你冲进去抱了三块小的。它们意外地轻。但一块大石头在你触碰后突然坠地，发出沉闷的声响。+2✨ +1🪨'},
-    {text:'绕路避开',a:'bypass',res:{},txt:'你决定不碰这些石头。但走出很远回头——它们好像跟着你移动了一点？也许是错觉。'},
-    {text:'停下来观察',a:'obs',res:{},disc:'浮游岩群 — 内部有发光脉络，晶体在生长又融化。会追随触碰过的人。',jrnl:'仔细观察了浮游岩。它们内部有类似血管的发光脉络。这些石头是活的——至少是某种形式的生命。',txt:'你蹲下来看了很久。脉络在脉动，晶体在不断生长又融化。你不知道这是什么——但你知道它不寻常。'}],},
-  talking_berry:{title:'窃窃私语的浆果丛',scene:'berry',text:`一丛异常饱满的野莓。正要伸手——\n\n"别碰！那是我的——"\n\n你猛地转身。没人。\n\n"......开玩笑的。摘吧。"\n\n声音是从脑子里直接响起的。`,choices:[
-    {text:'摘了就跑',a:'grab',res:{herb:3},txt:'你一把薅下三把野莓，拔腿就跑。"呜哇——粗鲁！"那个声音让你一整天心神不宁。+3🌿',jrnl:'浆果丛里有个声音。只有我能听到。它说我"粗鲁"。它是谁？'},
-    {text:'"你是谁？"' ,a:'ask',res:{herb:1},traits:['耳语者 — 能听到某些存在的低语'],txt:'"你居然能听到我。有意思。"沉默后它说："你和他们不一样。那些不会听的人。"它不再说话了。但你获得了某种...感知。+1🌿 🌿解锁【耳语者】',jrnl:'获得了"耳语者"的能力。那个声音说我和"其他人"不一样。还有其他人来过？',disc:'神秘低语 — 一个似乎存在于世界底层的声音。提到了"那些不会听的人"。'},
-    {text:'小心摘几颗',a:'gentle',res:{herb:2},txt:'你摘了几颗，留了一半。"...谢谢。很少有人这么做。往东走的话，小心那些会走的树。"+2🌿 获得关于漫步树的警告。',jrnl:'浆果丛的声音给了我一个警告——小心漫步树。"它们在躲什么东西"。'}],},
-  walk_tree:{title:'移动的巨树',scene:'w_tree',text:`你确定刚才这里是空地。现在有一棵树站在这里。
+function genWorld(){
+  worldTiles=[];worldEnts=[];
+  for(let y=0;y<MH;y++){worldTiles[y]=[];for(let x=0;x<MW;x++)worldTiles[y][x]={t:'grass',v:(x+y*3)%4};}
+  // River
+  for(let y=8;y<45;y++){for(let dx=-1;dx<=1;dx++){const x=38+dx;if(x>=0&&x<MW)worldTiles[y][x]={t:'water',v:0};}}
+  // Bridge
+  worldTiles[26][38]={t:'bridge',v:0};worldTiles[27][38]={t:'bridge',v:0};
+  // Home clearing
+  for(let y=20;y<=32;y++)for(let x=22;x<=33;x++){if(worldTiles[y][x].t!=='water')worldTiles[y][x]={t:'grass_home',v:0};}
+  // Path home→bridge
+  for(let x=33;x<=38;x++)worldTiles[26][x]={t:'path',v:0};
 
-树干底部粗壮的根须缓慢蠕动。整棵树在向你这边移动——然后停下。树干裂开，露出一个发光空洞——像一只巨大的眼睛。
+  // Trees
+  const trees=[[15,14],[18,16],[12,18],[20,15],[10,20],[16,22],[8,24],[22,14],[25,16],[28,13],[30,18],[44,14],[47,16],[50,13],[53,18],[55,15],[58,20],[60,14],[63,17],[14,30],[18,33],[10,35],[22,28],[25,30],[45,30],[48,27],[50,32],[55,28],[58,34],[60,30]];
+  trees.forEach(([x,y])=>{if(x>=0&&x<MW&&y>=0&&y<MH&&worldTiles[y][x].t==='grass')worldTiles[y][x]={t:'tree',v:0,hp:3};});
 
-它看着你。不是捕食者的注视。是...认出了什么？`,choices:[
-    {text:'砍它！',a:'axe',dis:true,dtxt:'需要工具台制作斧头',txt:''},
-    {text:'缓缓后退',a:'retreat',res:{wood:1},disc:'漫步树 — 会自由移动的巨树。有发光的"眼睛"。',txt:'你慢慢后退。它"注视"了你几秒，树冠微抖——像点头。然后继续缓慢移开，丢下一截发光的树枝。+1🪵活木',jrnl:'遇到了漫步树。它没有攻击我。它在躲避什么东西——浆果丛的话应验了。'},
-    {text:'站着不动',a:'stay',res:{wood:1},txt:'你没有动。十秒后——它的树枝垂下来，轻轻碰了碰你的左肩。然后树根加速，快速离开了。你的肩膀在发光。凉凉的。+1🪵活木',jrnl:'漫步树碰了我的肩膀。树液在我皮肤上发光。这不像偶然——它似乎在确认什么。',disc:'漫步树 — 用树枝触碰了我。它的树液让皮肤发光。'}],},
-  crystal_snail:{title:'折射之壳',scene:'snail',text:`一只巨大的蜗牛在溪边缓慢爬行。它的壳不是钙质的——是半透明的结晶体，像活的棱镜。
+  // Rocks
+  const rocks=[[17,20],[13,25],[20,28],[15,32],[26,20],[29,22],[24,28],[28,32],[45,20],[48,22],[52,25],[46,30],[56,22],[60,25],[58,30]];
+  rocks.forEach(([x,y])=>{if(x>=0&&x<MW&&y>=0&&y<MH&&worldTiles[y][x].t==='grass')worldTiles[y][x]={t:'rock',v:0,hp:2};});
 
-阳光穿过它的壳，在地面投射出彩虹般的光斑。它似乎没有注意到你。在它爬过的地方，青草表面凝了一层薄薄的霜。`,choices:[
-    {text:'攻击它',a:'atk',res:{crystal:1,stone:1},txt:'你挥拳砸向它的壳——壳发出一声脆响，但没有碎。它缩了进去。过了很久，一只触角试探性地伸出来。它好像...不知道你在攻击它。+1💎晶片 +1🪨',disc:'晶壳蜗牛 — 壳是活的棱镜，白天蓄光晚上折射。被攻击也不反击。',jrnl:'我攻击了晶壳蜗牛。它没有反击——甚至可能没有"被攻击"的概念。我为此感到莫名惭愧。'},
-    {text:'跟着它走',a:'follow',res:{herb:2},disc:'晶壳蜗牛 — 壳的折射指向隐藏的东西。它走过的路结霜。',txt:'你跟着它走了十分钟。它的壳不断折射阳光——在某一个角度，光斑聚集在灌木丛后的一个洞口。你记住了这个位置。+2🌿 发现隐藏洞穴的线索',jrnl:'晶壳蜗牛的壳像活地图——它的折射指向了隐藏的地点。这些生物在指引着什么。'},
-    {text:'给它食物',a:'feed',res:{herb:1,crystal:1},txt:'你从背包里掏出野莓放在它面前。它停下来，触角碰了碰浆果。然后壳开始缓慢变色——从透明变成柔和的琥珀色。它在...感谢你？一片晶片从壳上自然脱落。+1🌿 +1💎',jrnl:'给晶壳蜗牛分享了食物。它的壳变了颜色——它能感受善意。生物之间的某些东西在这里是相通的。'}],},
-  old_ruins:{title:'前任领主的笔记',scene:'ruins',text:`溪谷深处有一片石头废墟。不是自然倒塌——是被人刻意堆砌过的。石堆旁有一本皮面笔记本，封面已经发霉。
+  // Berry bushes
+  [[19,24],[23,22],[27,24],[21,30],[25,32],[49,24],[51,28],[54,22],[57,27],[59,24]].forEach(([x,y])=>{if(worldTiles[y]&&worldTiles[y][x]?.t==='grass')worldTiles[y][x]={t:'berry',v:0};});
 
-翻开第一页，字迹端正：
-"第1天。我还以为在梦里。这里太美了。要记录一切。"
-
-翻了几页——
-"第30天。有些不对劲。东西在改变——不是季节的改变。是规则在改变。"
-
-最后一页，字迹急剧潦草：
-"它看着我。就在我写字的时候。它在学习。"`,choices:[
-    {text:'带走笔记本',a:'take',jrnl:'找到了前任领主的日记。他记录了30天的变化。最后他确信有个东西在"学习"他。它知道他在写日记。',txt:'你把笔记本放入背包。前任领主的命运让你不寒而栗——但你需要知道更多。',res:{}},
-    {text:'只读不带走',a:'read',jrnl:'读了前任领主的日记但留在了原地。也许下一个发现它的人需要看到完整的记录。',txt:'你读完了，轻轻合上。也许下一个发现它的人也需要看到这些。你用一个石头压在封面上，防止被风吹走。',res:{}},
-    {text:'埋掉它',a:'bury',txt:'你用石头挖了个浅坑，把笔记本埋了。有些事不需要继续。但你在最后一页的背面看到了他自己留下的碳迹——"对不起，下一个会不同。"',jrnl:'埋掉了前领主的日记。但看到了他留给后来者的话。"对不起，下一个会不同。"',res:{},traits:['执念之触 — 前任领主的记忆偶尔会闪现在你的意识中']}],},
-  memory_pool:{title:'记忆池',scene:'pool',text:`一汪寂静的水面——但水里没有倒影。
-
-你往水里看，看到的不是自己的脸——是一个陌生男人的脸。他看起来很疲惫。嘴巴在动，但没有声音。他在对你说话。`,choices:[
-    {text:'触碰水面',a:'touch',res:{},traits:['记忆印记 — 手指能感受到不属于自己的回忆'],txt:'你的手指碰到水面——画面变了。你看到那个男人在书写。他的手在发抖。他抬起头，直接看向你的方向——看向未来。然后你醒了。你不知道过了多久。',jrnl:'触碰了记忆池。看到了前任领主的最后一刻。他在对我说话——隔着时间。',disc:'记忆池 — 能映照过去的记忆而非现在的倒影。'},
-    {text:'仔细看',a:'watch',txt:'你盯着水面。他在重复三个字。你读不出来——但从口型看，像是"看-天-空"。水面开始退去，水池在你眼前干涸。',jrnl:'在水池里看到了前任领主。他在重复三个字。"看天空"。',disc:'记忆池 — 曾映照出一个男人的幻影。池水已干但记忆还在。'},
-    {text:'转身离开',a:'leave',txt:'你决定不看。有些记忆不该被惊醒。水池在你身后发出一声轻微的叹息——然后水面碎了。',res:{}}],},
-  mirror_swarm:{title:'镜面蝶群',scene:'mirror',text:`森林深处的一片空地。数百只蝴蝶在飞舞——但它们的翅膀不是花纹，是镜面。每一片翅膀都在反射——不是反射光线，是反射画面。
-
-你在一只蝴蝶的翅膀上看到了自己——但不是现在的自己。是更老的。身边站着一个精灵男孩？还是女孩？你看不清。`,choices:[
-    {text:'试图抓住一只',a:'catch',res:{crystal:2},disc:'镜面蝶 — 翅膀能反射可能的未来。',txt:'你猛地伸手——一只蝴蝶停在你的指尖。它的翅膀上，你看到莉莉在笑。她不孤独了。然后蝴蝶飞走了。+2💎',jrnl:'镜面蝶反射了未来——我看到莉莉不再孤独。那些画面是真实的还是可能的？'},
-    {text:'安静地看',a:'watch2',res:{starshard:2},txt:'你站在原地不动。蝶群在你周围形成了一个环，翅膀上的画面开始同步——你看到了一片废墟、一座宏伟的城市、然后又是废墟。这是过去还是未来？+2✨',jrnl:'镜面蝶群展示了这片土地的过去与未来。繁荣与废墟交替。这是一个循环吗？'},
-    {text:'对它们说话',a:'speak',res:{},traits:['镜面回响 — 你的话有时会以意想不到的方式返回'],txt:'"你们看到了什么？"你问。所有蝴蝶突然停住。然后它们的翅膀同步变色——一片深红。过了几秒，蝴蝶散去。你不知道红色代表什么——但你感到这不是好事。',jrnl:'对镜面蝶说了话。它们的回应是一片血红。某种警告？'}],},
-  void_merchant:{title:'虚空商贩',scene:'void',text:`森林的空地中突然出现了一个身影。它不在那里——然后它在了。
-
-一个裹在深色长袍里的人形——或者人形的东西。它不说话，只是打开了一个漂浮在空中的货架。上面摆着你不认识的物品。
-
-它指向你的背包。又指向货架上的一个物品。它想交易——但没有任何语言。`,choices:[
-    {text:'放一个物品交换',a:'trade',res:{crystal:3},txt:'你小心翼翼地放上一颗野莓。商贩注视了许久，然后从货架上取下一块发光的晶体，放在你的手中。它接受了你的出价。3💎晶片',jrnl:'遇到了虚空商贩。它不用语言交易——但我放上的野莓被接受了。它给了晶片。',disc:'虚空商贩 — 一种不知来源的存在。用沉默进行交易。价格似乎由它决定。'},
-    {text:'什么也不做',a:'none',txt:'你站在原地，只是看着。商贩也看着你。长久的沉默后——它收起了货架，然后消失了。就像从来没有出现过。但地上留下了一根黑色的羽毛。',res:{},jrnl:'对虚空商贩保持了沉默。它留下了羽毛后消失了。也许它在考验我。'},
-    {text:'指向货架提问',a:'ask2',txt:'你指着货架上一颗发光的珠子，用眼神询问。商贩歪了歪头——然后珠子消失了，出现在你的背包里。它没有拿走你的任何东西。是赠礼？还是欠债？',res:{crystal:1,starshard:1},jrnl:'虚空商贩给了我一个东西但没有要回报。这是赠礼还是有什么代价我还没看到？'}],},
-  forest_heart:{title:'森林之心',scene:'heart',text:`森林的最深处。树木在这里围成了一个完美的圆。圆心是一棵巨大到不可思议的古树——树干的直径比你见过的任何房子都宽。
-
-树皮上有刻痕。你走近——是字。很多人的字。不同的语言。其中一行你读得懂：
-
-"我们曾经来过。我们又都离开了。只有森林记得。"
-
-树干底部有一个树洞。里面有什么东西在发出柔和的光。`,choices:[
-    {text:'进入树洞',a:'enter',res:{crystal:3,starshard:2},txt:'你弯腰进入树洞。里面是一个温暖的空间——树根像茧一样包裹着四周。正中央悬浮着一颗拳头大小的光球。它在你靠近时变得更亮。你的手穿过它时——\n\n你看到了一切。过去的、未来的、可能的。一片混乱的画面。你只记住了一个清晰的：一个身影站在两棵树之间，树枝向两边分开——形成了一扇门。\n\n+3💎 +2✨ 解锁记忆：「门」的位置',jrnl:'进入了古树的内部。看到了无数的过去与未来。一棵树间之门——通向哪里？',disc:'森林之心 — 巨大古树内部的光球。展示了世界记忆的一部分。'},
-    {text:'读取树皮文字',a:'read2',txt:'你仔细阅读了所有你能读懂的刻痕。来自不同世界的文字——但都在说同一件事："这里来过很多人。没有人真正回来。"\n\n最新的刻痕还很新鲜："如果你看到这句——搜索森林的南端。那里有一扇不该存在的门。"',jrnl:'古树树皮上刻着来自不同世界的留言。最新的一条指引我去森林南端。',res:{}},
-    {text:'触摸光球但不进入',a:'touch2',res:{starshard:1},txt:'你只让指尖碰到光球。一道暖意流过你的手臂。林中的一切突然变得更加清晰——你能听到每一片叶子的呼吸。但这个感觉只持续了十几秒就消失了。\n\n+1✨ 曾短暂感知了整片森林',jrnl:'触摸了森林之心的光球边缘。短暂感知了整片森林的意识——每一片叶子都在呼吸。',traits:['森林共鸣 — 在森林中可以感知到更远的东西']}],},
-};
-
-// ═══════════════════ BUILDING SYSTEM ═══════════════════
-function canBuild(id){const b=BUILDINGS[id];if(!b)return false;if(GS.bldgs.includes(id))return false;for(const[k,v]of Object.entries(b.cost)){if((GS.res[k]||0)<v)return false;}return true;}
-function tryBuild(id){if(!canBuild(id))return false;const b=BUILDINGS[id];for(const[k,v]of Object.entries(b.cost))GS.res[k]-=v;GS.bldgs.push(id);if(id==='watch')GS.flags.ch1Unlock=true;if(id==='storage')GS.flags.builtStorage=true;announce(`🏗️ ${b.name}建成！`);save();UI();return true;}
-function getBuildable(){return Object.keys(BUILDINGS).filter(id=>!GS.bldgs.includes(id)&&canBuild(id));}
-function getUnlockable(){return Object.keys(BUILDINGS).filter(id=>{
-  if(GS.bldgs.includes(id))return false;
-  if(id==='garden'&&!GS.flags.firstExp)return false;
-  if(id==='furnace'&&(GS.res.ironOre||0)<1)return false;
-  if(id==='watch'&&GS.res.starshard<2)return false;
-  return true;
-});}
-
-// ═══════════════════ DIALOG ═══════════════════
-let _dr=null;
-function dlg(speaker,portrait,text,choices){
-  if(GS.blocked)return Promise.resolve(-1);
-  return new Promise(r=>{_dr={r,choices};
-    const b=document.getElementById('dlg-box');
-    let h=`<div class="d-portrait">${portrait}</div><div class="d-speaker">${speaker}</div><div class="d-text">${text.replace(/\n/g,'<br>')}</div>`;
-    if(choices&&choices.length){
-      h+='<div class="d-choices">';
-      choices.forEach((c,i)=>{
-        if(c.dis){h+=`<button disabled>${c.text}<small>${c.dtxt||''}</small></button>`;}
-        else h+=`<button onclick="GM.dlgPick(${i})">${c.text}</button>`;
-      });h+='</div>';
-    }else{h+='<button class="d-btn" style="display:block;margin:0 auto" onclick="GM.dlgPick(-1)">继续 ▸</button>';}
-    b.innerHTML=h;document.getElementById('dlg-overlay').classList.add('show');GS.blocked=true;
-  });}
-function announce(t,dur=2400){
-  const e=document.getElementById('announce');e.textContent=t;e.classList.add('show');
-  setTimeout(()=>e.classList.remove('show'),dur);}
-function toast(t){const id=Date.now();TOASTS.push({id,text:t});setTimeout(()=>TOASTS=TOASTS.filter(x=>x.id!==id),2500);UI();}
-function hint(t){const e=document.getElementById('hint');e.textContent=t;e.classList.add('show');setTimeout(()=>e.classList.remove('show'),5000);}
-
-// ═══════════════════ RENDERER ═══════════════════
-const R={
-  init(){const c=document.getElementById('gc');c.width=0;this.draw();},
-  draw(){
-    const c=document.getElementById('gc'),p=c.parentElement;
-    const pw=p.clientWidth,ph=p.clientHeight;c.width=pw*2;c.height=ph*2;
-    W=c.width;H=c.height;const ctx=c.getContext('2d');ctx.scale(2,2);
-    const w=W/2,h=H/2;ctx.imageSmoothingEnabled=false;
-    if(GS.mode==='home')this.home(ctx,w,h);else this.expMap(ctx,w,h);
-    this.particles(ctx);FR++;
-  },
-  home(ctx,w,h){
-    // Sky
-    const todColors={morning:['#5a7a8a','#7a9aaa','#9abaca'],day:['#4a7a9a','#6a9aba','#8abada'],dusk:['#c07050','#d09070','#e0a880'],night:['#0a0a25','#151535','#1a1a40']};
-    const sky=todColors[GS.tod]||todColors.day;
-    const g=ctx.createLinearGradient(0,0,0,h);g.addColorStop(0,sky[0]);g.addColorStop(.5,sky[1]);g.addColorStop(1,sky[2]);
-    ctx.fillStyle=g;ctx.fillRect(0,0,w,h);
-    // Stars at night
-    if(GS.tod==='night'){for(let i=0;i<40;i++){const sx=(i*137+FR*0.02)%w,sy=(i*251)%h*0.6;ctx.fillStyle=`rgba(255,255,200,${0.3+Math.sin(FR*0.03+i)*0.3})`;ctx.beginPath();ctx.arc(sx,sy,1.5,0,Math.PI*2);ctx.fill();}}
-    // Distant horizon
-    const gY=h*0.4;ctx.fillStyle=sky[2];ctx.fillRect(0,gY-20,w,h*0.25);
-    // Ground
-    const grd=ctx.createLinearGradient(0,gY,0,h);grd.addColorStop(0,'#4a7c50');grd.addColorStop(1,'#3a5c3a');
-    ctx.fillStyle=grd;ctx.fillRect(0,gY,w,h-gY);
-    // Grass texture
-    for(let x=0;x<w;x+=16){for(let y=gY;y<h;y+=12){const v=((x+y*0.7)%3);ctx.fillStyle=[PAL.gr1,PAL.gr2,PAL.gr3][Math.floor(v)];ctx.fillRect(x,y,16,12);}}
-    // Path
-    const cp={x:w/2,y:gY+h*0.35};
-    ctx.fillStyle='rgba(139,115,85,.4)';ctx.beginPath();ctx.ellipse(cp.x,cp.y,w*0.5,h*0.28,0,0,Math.PI*2);ctx.fill();
-
-    // Grid
-    const gs=Math.min(w*0.14,70);
-    const slots=[{id:'hut',c:0,r:0},{id:'craft',c:1,r:0},{id:'garden',c:2,r:0},{id:'storage',c:0,r:1},{id:'furnace',c:1,r:1},{id:'watch',c:2,r:1}];
-    slots.forEach(s=>{
-      const gx=cp.x+(s.c-1.05)*gs*1.25,gy=cp.y+(s.r-0.55)*gs*1.3;
-      ctx.fillStyle='rgba(0,0,0,.12)';ctx.fillRect(gx,gy,gs,gs);
-      ctx.strokeStyle='rgba(200,164,92,.15)';ctx.lineWidth=1;
-      if(!GS.bldgs.includes(s.id)&&s.id!=='hut'){ctx.setLineDash([3,3]);ctx.strokeRect(gx,gy,gs,gs);ctx.setLineDash([]);}
-      else ctx.strokeRect(gx,gy,gs,gs);
-    });
-
-    // Buildings
-    slots.forEach(s=>{const gx=cp.x+(s.c-1.05)*gs*1.25,gy=cp.y+(s.r-0.55)*gs*1.3;
-      if(GS.bldgs.includes(s.id)||s.id==='hut')this.building(ctx,gx,gy,gs,s.id);});
-
-    // Night glow for moon grass
-    if(GS.tod==='night'&&GS.flags.firstNight){
-      const gx=cp.x+1*gs*1.3+gs/2,gy=cp.y-0.55*gs*1.3+gs/2;
-      ctx.fillStyle='rgba(120,160,255,.15)';ctx.beginPath();ctx.arc(gx,gy,gs*0.6,0,Math.PI*2);ctx.fill();
-      for(let i=0;i<6;i++){const fx=gx-gs*0.3+i*gs*0.12,fy=gy+Math.sin(FR/40+i)*4;ctx.fillStyle='rgba(160,200,255,.7)';ctx.beginPath();ctx.arc(fx,fy,2.5,0,Math.PI*2);ctx.fill();}
+  // ══════ ANOMALIES ══════
+  // Floating rocks
+  for(let y=12;y<42;y+=4){for(let x=42;x<55;x+=5){
+    if((x+y)%7===0&&worldTiles[y]&&worldTiles[y][x]?.t==='grass'){
+      worldEnts.push({type:'float_rock',x:x+.5,y:y+.5,phase:Math.random()*Math.PI*2,alive:true,data:{}});
     }
+  }}
+  // Walking trees
+  [[60,12],[63,15],[61,19],[64,22],[60,27],[63,30],[62,35]].forEach(([x,y])=>{
+    worldEnts.push({type:'walk_tree',x:x+.5,y:y+.5,phase:Math.random()*Math.PI*2,alive:true,dx:0,dy:0,data:{moved:0}});
+  });
+  // Crystal snail
+  worldEnts.push({type:'crystal_snail',x:44.5,y:35,phase:0,alive:true,pathIdx:0,data:{path:[[44,35],[46,36],[48,35],[50,34],[48,33],[46,34]]}});
+  // Memory jellyfish
+  for(let i=0;i<3;i++)worldEnts.push({type:'memory_jelly',x:42+i*4,y:15+i*3,phase:Math.random()*Math.PI*2,alive:true,data:{}});
+  // Mirror butterflies
+  worldEnts.push({type:'mirror_butterfly',x:56,y:20,cx:56,cy:20,phase:0,alive:true,butterflies:Array.from({length:12},(_,i)=>({dx:(Math.random()-.5)*6,dy:(Math.random()-.5)*6,ph:Math.random()*Math.PI*2,sp:0.3+Math.random()*0.7}))});
+  // Void merchant (spawns later)
+  worldEnts.push({type:'void_merchant',x:58,y:28,alive:false,phase:0,spawnDay:2,data:{}});
 
-    // Lily NPC
-    const lx=cp.x-gs*2,ly=cp.y+gs*0.1;this.lily(ctx,lx,ly,gs*0.7);
-    // Player
-    const px=cp.x-gs*2.4,py=cp.y+gs*0.05;this.player(ctx,px,py,gs*0.65);
-  },
-  building(ctx,x,y,s,id){
-    const b=BUILDINGS[id];if(!b)return;
-    ctx.fillStyle='#3a2f24';ctx.fillRect(x+4,y+4,s-8,s-8);
-    ctx.fillStyle=PAL.gd;ctx.font=`${s*0.35}px sans-serif`;ctx.textAlign='center';
-    ctx.fillText(b.icon,x+s/2,y+s/2+s*0.12);
-    ctx.fillStyle='rgba(200,164,92,.6)';ctx.font=`bold ${s*0.14}px sans-serif`;
-    ctx.fillText(b.name,x+s/2,y+s-6);
-  },
-  player(ctx,x,y,s){
-    ctx.fillStyle='rgba(0,0,0,.15)';ctx.beginPath();ctx.ellipse(x+s/2,y+s-2,s*0.35,4,0,0,Math.PI*2);ctx.fill();
-    ctx.fillStyle='#5a4020';ctx.fillRect(x+s*0.3,y+s*0.7,s*0.16,s*0.2);ctx.fillRect(x+s*0.52,y+s*0.7,s*0.16,s*0.2);
-    ctx.fillStyle='#4488cc';ctx.fillRect(x+s*0.2,y+s*0.35,s*0.6,s*0.38);
-    ctx.fillStyle=PAL.sk;ctx.fillRect(x+s*0.1,y+s*0.35,s*0.12,s*0.4);ctx.fillRect(x+s*0.78,y+s*0.35,s*0.12,s*0.4);
-    ctx.fillStyle=PAL.sk;ctx.fillRect(x+s*0.22,y+s*0.08,s*0.56,s*0.28);
-    ctx.fillStyle=PAL.hr;ctx.fillRect(x+s*0.15,y+s*0.04,s*0.7,s*0.12);
-    ctx.fillStyle='#000';ctx.fillRect(x+s*0.35,y+s*0.18,s*0.06,s*0.05);ctx.fillRect(x+s*0.55,y+s*0.18,s*0.06,s*0.05);
-    ctx.fillStyle='#3a2810';ctx.fillRect(x+s*0.28,y+s*0.92,s*0.18,s*0.06);ctx.fillRect(x+s*0.5,y+s*0.92,s*0.18,s*0.06);
-    // Traits visual
-    if(GS.traits.some(t=>t.includes('蓝荧'))){ctx.fillStyle='rgba(120,170,255,.5)';ctx.fillRect(x+s*0.06,y+s*0.7,s*0.08,s*0.06);ctx.fillRect(x+s*0.84,y+s*0.7,s*0.08,s*0.06);}
-    if(GS.traits.some(t=>t.includes('记忆印记'))||GS.traits.some(t=>t.includes('执念'))){ctx.fillStyle='rgba(200,150,255,.3)';ctx.beginPath();ctx.arc(x+s/2,y+s*0.08,s*0.5,0,Math.PI*2);ctx.fill();}
-  },
-  lily(ctx,x,y,s){
-    ctx.fillStyle='rgba(0,0,0,.15)';ctx.beginPath();ctx.ellipse(x+s/2,y+s-2,s*0.35,4,0,0,Math.PI*2);ctx.fill();
-    ctx.fillStyle=PAL.eg;ctx.fillRect(x+s*0.22,y+s*0.35,s*0.56,s*0.55);
-    ctx.fillStyle=PAL.sk;ctx.fillRect(x+s*0.25,y+s*0.1,s*0.5,s*0.28);
-    ctx.fillStyle=PAL.sv;ctx.fillRect(x+s*0.15,y+s*0.02,s*0.7,s*0.16);ctx.fillRect(x+s*0.07,y+s*0.08,s*0.1,s*0.18);ctx.fillRect(x+s*0.83,y+s*0.08,s*0.1,s*0.18);
-    ctx.fillStyle='#2a5a2a';ctx.fillRect(x+s*0.34,y+s*0.18,s*0.06,s*0.05);ctx.fillRect(x+s*0.56,y+s*0.18,s*0.06,s*0.05);
-    ctx.fillStyle=PAL.sk;ctx.fillRect(x+s*0.06,y+s*0.1,s*0.1,s*0.16);ctx.fillRect(x+s*0.84,y+s*0.1,s*0.1,s*0.16);
-    ctx.strokeStyle='#5a3a2a';ctx.lineWidth=.5;ctx.beginPath();ctx.arc(x+s*0.48,y+s*0.24,s*0.05,0,Math.PI);ctx.stroke();
-    ctx.fillStyle='#4a2810';ctx.fillRect(x+s*0.24,y+s*0.93,s*0.2,s*0.06);ctx.fillRect(x+s*0.52,y+s*0.93,s*0.2,s*0.06);
-  },
-  expMap(ctx,w,h){
-    const g=ctx.createLinearGradient(0,0,0,h);g.addColorStop(0,'#2a3a4a');g.addColorStop(.5,'#3a5040');g.addColorStop(1,'#2a4030');
-    ctx.fillStyle=g;ctx.fillRect(0,0,w,h);
-    const expId=GS.exp.dir;const exp=EXPEDITIONS[expId];if(!exp){ctx.fillStyle='#aaa';ctx.font='15px sans-serif';ctx.textAlign='center';ctx.fillText('远征',w/2,h/2-10);return;}
-    ctx.fillStyle=PAL.gd;ctx.font='bold 18px sans-serif';ctx.fillText(exp.name,w/2,32);
-    ctx.fillStyle='#aaa';ctx.font='12px sans-serif';ctx.fillText('点击节点前进',w/2,50);
-    const nodes=exp.nodes;
-    const sx=w*0.12,ex=w*0.88,ny=h*0.5;
-    const sp=(ex-sx)/Math.max(nodes.length-1,1);
-    // Path
-    ctx.strokeStyle='rgba(200,164,92,.2)';ctx.lineWidth=3;ctx.lineCap='round';
-    ctx.beginPath();ctx.moveTo(sx,ny);for(let i=1;i<nodes.length;i++)ctx.lineTo(sx+sp*i,ny);ctx.stroke();
-    // Walked path
-    if(GS.exp.node>0){ctx.strokeStyle='rgba(200,164,92,.5)';ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(sx,ny);for(let i=1;i<=Math.min(GS.exp.node,nodes.length-1);i++)ctx.lineTo(sx+sp*i,ny);ctx.stroke();}
-    // Nodes
-    nodes.forEach((n,i)=>{
-      const nx=sx+sp*i,passed=i<GS.exp.node,curr=i===GS.exp.node;
-      const r=curr?16:passed?10:8;
-      ctx.fillStyle=passed?'rgba(200,164,92,.4)':curr?PAL.gd:'rgba(200,164,92,.15)';
-      ctx.beginPath();ctx.arc(nx,ny,r,0,Math.PI*2);ctx.fill();
-      ctx.strokeStyle=curr?PAL.gd:'rgba(200,164,92,.3)';ctx.lineWidth=curr?2:1;
-      ctx.beginPath();ctx.arc(nx,ny,curr?r+4:r+2,0,Math.PI*2);ctx.stroke();
-      if(curr){ctx.strokeStyle='rgba(200,164,92,.3)';ctx.lineWidth=1;ctx.beginPath();ctx.arc(nx,ny,r+6+Math.sin(FR/12)*3,0,Math.PI*2);ctx.stroke();}
-      ctx.fillStyle='#fff';ctx.font=`${curr?14:11}px sans-serif`;ctx.textAlign='center';
-      ctx.fillText(n.t==='return'?'🏠':n.l,nx,ny-curr?20:16);
-    });
-    // Hint
-    ctx.fillStyle='rgba(200,164,92,.6)';ctx.font='12px sans-serif';ctx.textAlign='center';
-    if(!GS.exp.active)ctx.fillText('选择一个方向出发',w/2,h-40);
-    else if(GS.exp.node>=nodes.length)ctx.fillText('点击返回...',w/2,h-40);
-    else ctx.fillText('点击地图继续前进',w/2,h-40);
-  },
-  particles(ctx){},
-};
-
-// ═══════════════════ GAME MANAGER ═══════════════════
-const GM={
-  dlgPick(i){document.getElementById('dlg-overlay').classList.remove('show');GS.blocked=false;if(_dr){const r=_dr.r;_dr=null;r(i);}},
-  mode(m){
-    if(GS.blocked)return;
-    GS.mode=m;
-    document.getElementById('btn_home').classList.toggle('active',m==='home');
-    document.getElementById('btn_exp').classList.toggle('active',m==='exp');
-    R.draw();
-    if(m==='home')hint('🏠 领地 · 选择建筑或查看信息');
-    if(m==='exp'&&!GS.exp.active)hint('🗺️ 点击地图上的节点开始远征');
-  },
-  panel(type){
-    let h='';const b=document.getElementById('dlg-box');
-    if(type==='bestiary'){h='<h3>📖 奇异图鉴</h3>';
-      if(!GS.disc.length)h+='<p style="color:#888">还没有发现任何奇异事物。<br>去远征吧！</p>';
-      else GS.disc.forEach(d=>h+=`<div class="d-item">${d}</div>`);}
-    else if(type==='journal'){h='<h3>📜 冒险日志</h3>';
-      if(!GS.journal.length)h+='<p style="color:#888">还没有记录。<br>经历的事情会记录在这里。</p>';
-      else GS.journal.forEach(j=>h+=`<div class="j-item">📝 ${j}</div>`);}
-    else if(type==='build'){h='<h3>🏗️ 建造</h3>';
-      const list=getUnlockable();const blist=getBuildable();
-      if(!list.length)h+='<p style="color:#888">当前没有可建造的建筑。<br>收集更多资源或满足条件后再来。</p>';
-      else{list.forEach(id=>{const b=BUILDINGS[id];const ok=blist.includes(id);
-        let info=`${b.icon} ${b.name} — `;
-        const costs=Object.entries(b.cost).map(([k,v])=>{const icons={wood:'🪵',stone:'🪨',starshard:'✨',herb:'🌿',ironOre:'⛏️',plank:'🪵板'};return `${icons[k]||k}${v}`;}).join(' ');
-        info+=costs||'免费';
-        if(b.desc.includes('\n'))info+=`<br><small style="color:#888">${b.desc.replace(/\n/g,'<br>')}</small>`;
-        else info+=`<small style="color:#888"> — ${b.desc}</small>`;
-        if(ok)h+=`<div class="d-choices"><button onclick="GM.build('${id}')" style="text-align:left">${info}</button></div>`;
-        else h+=`<div class="d-item" style="opacity:.5">🔒 ${info}</div>`;
-      });}}
-    h+='<button class="d-btn" style="margin-top:12px" onclick="GM.dlgPick(-1)">关闭</button>';
-    b.innerHTML=h;document.getElementById('dlg-overlay').classList.add('show');GS.blocked=true;
-  },
-  build(id){if(tryBuild(id)){document.getElementById('dlg-overlay').classList.remove('show');GS.blocked=false;GM.mode('home');R.draw();}},
-  async startExp(dirId){
-    if(GS.blocked)return;
-    GS.exp={active:true,dir:dirId,node:0};
-    GS.mode='exp';document.getElementById('btn_home').classList.remove('active');document.getElementById('btn_exp').classList.add('active');
-    R.draw();await sleep(800);await GM.advanceExp();
-  },
-  async advanceExp(){
-    if(GS.blocked)return;
-    const exp=EXPEDITIONS[GS.exp.dir];if(!exp||GS.exp.node>=exp.nodes.length)return;
-    const n=exp.nodes[GS.exp.node];if(!n)return;
-    if(n.t==='return'){await GM.finishExp();return;}
-    GS.exp.node++;R.draw();await sleep(600);
-    if(n.t==='event'&&n.e){await GM.runEvent(n.e);}
-    if(GS.exp.node>=exp.nodes.length||exp.nodes[GS.exp.node]?.t==='return'){await sleep(300);await GM.finishExp();}
-  },
-  async runEvent(eid){
-    const ev=EVENTS[eid];if(!ev)return;
-    const ci=await dlg(ev.title,'❓',ev.text,ev.choices.filter(c=>!c.dis));
-    if(ci<0)return;
-    const c=ev.choices.filter(x=>!x.dis)[ci];if(!c)return;
-    if(c.txt)await dlg('','💬',c.txt);
-    if(c.res){for(const[k,v]of Object.entries(c.res))GS.res[k]=(GS.res[k]||0)+v;}
-    if(c.disc)GM.addDisc(c.disc);
-    if(c.jrnl)GM.addJrnl(c.jrnl);
-    if(c.traits){c.traits.forEach(t=>GM.addTrait(t));}
-    GS.exp.completed=GS.exp.completed||[];GS.exp.completed.push(eid);
-    save();UI();
-  },
-  async finishExp(){
-    const exp=EXPEDITIONS[GS.exp.dir];if(!exp)return;
-    if(exp.reward){for(const[k,v]of Object.entries(exp.reward))GS.res[k]=(GS.res[k]||0)+v;}
-    if(exp.story)exp.story.forEach(s=>GM.addJrnl(s));
-    GS.exp={active:false,dir:null,node:0,completed:GS.exp.completed||[]};
-    GS.flags.firstExp=true;GS.tod='dusk';GM.mode('home');
-    R.draw();announce('🏠 远征归来！');save();UI();await sleep(1500);
-    if(!GS.flags.firstNight){await GM.nightfall();}
-  },
-  async nightfall(){
-    GS.flags.firstNight=true;GS.tod='night';GM.addDisc('月露草 — 只在月光下开放。和你指尖一样的光。');
-    GS.bldgs.push('garden');R.draw();UI();
-    await dlg('夜幕','🌙',`天黑了下来。\n\n领地的角落亮起柔和的蓝光——一丛你从未见过的植物从泥土中钻出来。细茎顶端是半透明的花苞。\n\n莉莉站在你旁边，声音很轻："月露草。只在月光下开花。"\n\n她看了一眼你的手——指尖也在发出同样的光。\n\n"...和你的手一样的颜色。"`);
-    if(!GS.flags.dreamHad)await GM.dream();
-  },
-  async dream(){
-    GS.flags.dreamHad=true;R.draw();UI();announce('💤 沉入梦境...');await sleep(1800);
-    await dlg('???','👁️',`黑暗中有韵律——像心跳，又像呼吸。\n\n意识里直接出现了文字：\n\n"第47个。欢迎来到边缘。"\n\n"你不是来寻找答案的。你是答案。"\n\n"边缘在崩塌。他们的眼睛快闭上了。在看不到你之前——"加快。"\n\n你猛地惊醒。天已经亮了。手心里写着你没写过的字：\n\n"抬头看天。"`);
-    GS.flags.firstChange=true;GM.addTrait('蓝荧之触 — 指尖和月露草同步发光');
-    GM.addJrnl('梦里的声音说我是第47个。"边缘在崩塌。他们的眼睛要闭上了。"我醒来时手心里写着"抬头看天"。');
-    GS.day=2;GS.tod='morning';R.draw();UI();save();
-    await dlg('莉莉','🧝‍♀️',`第二天早上。
-
-莉莉看着你发光的手，沉默了很久。
-
-"...前任领主在日记里写过类似的事。第三十天的时候，他写道：'我的影子开始不按我的动作移动了。'然后没多久他就消失了。"
-
-她咬了咬嘴唇。
-
-"但你不是他。你有我。"`);
-  },
-  addDisc(d){if(!GS.disc.includes(d)){GS.disc.push(d);toast('🔍 新发现！');}},
-  addJrnl(j){if(!GS.journal.includes(j)){GS.journal.push(j);toast('📝 已记录');}},
-  addTrait(t){if(!GS.traits.includes(t)){GS.traits.push(t);announce(`🌿 ${t.split('—')[0].trim()}`);}},
-};
-
-// ═══════════════════ SAVE/LOAD ═══════════════════
-function save(){localStorage.setItem('isekai_v5',JSON.stringify({chapter:GS.chapter,day:GS.day,tod:GS.tod,res:GS.res,bldgs:GS.bldgs,traits:GS.traits,disc:GS.disc,journal:GS.journal,flags:GS.flags,paths:GS.paths,expCompleted:GS.exp.completed}));}
-function load(){const r=localStorage.getItem('isekai_v5');if(!r)return false;try{const d=JSON.parse(r);Object.assign(GS,{...GS,chapter:d.chapter,day:d.day,tod:d.tod,res:d.res,bldgs:d.bldgs,traits:d.traits,disc:d.disc,journal:d.journal,flags:d.flags,paths:d.paths||{},exp:{active:false,dir:null,node:0,completed:d.expCompleted||[]}});return true;}catch(e){return false;}}
-function UI(){
-  document.getElementById('r_wood').textContent=GS.res.wood;document.getElementById('r_stone').textContent=GS.res.stone;
-  document.getElementById('r_star').textContent=GS.res.starshard;document.getElementById('r_herb').textContent=GS.res.herb;
-  const todMap={morning:'☀️',day:'☀️',dusk:'🌅',night:'🌙'};document.getElementById('t_tod').textContent=todMap[GS.tod]||'☀️';
-  document.getElementById('t_day').textContent=`第${GS.day}天`;
-  document.getElementById('t_chapter').textContent=GS.flags.ch1Unlock?'第一章·林中之声':'序幕·苏醒';
-  document.getElementById('t_loc').textContent=GS.mode==='home'?(GS.flags.firstNight?'领地':'未知荒野'):'远征中';
-  const toastEl=document.getElementById('toast');
-  toastEl.innerHTML=TOASTS.map(t=>`<div class="toast-item">${t.text}</div>`).join('');
+  // Glitch edge
+  for(let y=5;y<50;y+=2)for(let x=75;x<MW;x+=3)if(worldTiles[y]&&worldTiles[y][x])worldTiles[y][x]={t:'glitch',v:0};
 }
-function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
 
-// ═══════════════════ INPUT ═══════════════════
-document.getElementById('gc').addEventListener('click',async(e)=>{
-  if(GS.blocked)return;
-  if(GS.mode==='exp'&&GS.exp.active){await GM.advanceExp();}
-  else if(GS.mode==='exp'&&!GS.exp.active){
-    // Show expedition options
-    const opts=[];
-    if(true)opts.push({id:'prologue_east',name:'东部荒野',desc:'浮游岩群 · 浆果丛 · 漫步树',unlocked:true});
-    if(GS.flags.firstExp)opts.push({id:'prologue_south',name:'南部溪谷',desc:'晶壳蜗牛 · 古代废墟 · 记忆池',unlocked:true});
-    if(GS.flags.ch1Unlock)opts.push({id:'chapter1_deep',name:'漫步森林深处',desc:'镜面蝶群 · 虚空商贩 · 森林之心',unlocked:true});
-    if(opts.length===0){announce('还没有可用的远征方向');return;}
-    const ci=await dlg('选择远征方向','🗺️','去哪里？',opts.filter(o=>o.unlocked).map(o=>({text:`${o.name}`,txt:o.desc})));
-    if(ci>=0){const chosen=opts.filter(o=>o.unlocked)[ci];if(chosen)await GM.startExp(chosen.id);}
+// ─── PLAYER ───
+let player={x:27.5,y:26.5,vx:0,vy:0,dir:0,speed:3.5};
+
+// ─── HOME & BUILDINGS ───
+let buildings=[{type:'hut',x:27,y:25}];
+let builtSet=['hut'];
+
+// ─── GAME STATE ───
+let GS={
+  day:1,tod:'morning', // morning|day|dusk|night
+  todTimer:0,dayLen:480, // frames per time period
+  res:{wood:0,stone:0,starshard:0,herb:0,crystal:0,ironOre:0},
+  traits:[],disc:[],journal:[],
+  flags:{firstExp:false,firstNight:false,dreamHad:false,firstChange:false,ch1:false},
+  lilyAff:0,lilyTalks:0,expCompleted:[],
+  playerBubble:null,bubbleTimer:0,
+  npcBubbles:{},
+};
+
+// ─── BUILDING DEFS ───
+const BDEFS={
+  hut:{name:'小屋',icon:'🏠',cost:{},desc:'你的家',buildOn:['grass_home']},
+  storage:{name:'仓库',icon:'📦',cost:{wood:3,stone:2},desc:'存放资源',buildOn:['grass_home']},
+  craft:{name:'工具台',icon:'🔨',cost:{wood:5,stone:3},desc:'制作工具',buildOn:['grass_home']},
+  furnace:{name:'熔炉',icon:'🔥',cost:{stone:5,ironOre:2},desc:'冶炼金属',buildOn:['grass_home']},
+  garden:{name:'菜园',icon:'🌱',cost:{wood:3,herb:2},desc:'种植作物',buildOn:['grass_home'],need:'firstExp'},
+  watch:{name:'观星台',icon:'🔭',cost:{wood:10,stone:6,starshard:2},desc:'解锁第一章',buildOn:['grass_home']},
+};
+
+// ─── BUBBLES ───
+function playerSay(text,col='#fff'){GS.playerBubble=text;GS.bubbleTimer=120;}
+function npcSay(id,text,col='#ddd'){GS.npcBubbles[id]=text;}
+
+// ─── PARTICLES ───
+let particles=[];
+function spawnP(x,y,color,count=8,speed=2){
+  for(let i=0;i<count;i++){
+    const a=Math.random()*Math.PI*2,d=Math.random()*speed;
+    particles.push({x,y,vx:Math.cos(a)*d,vy:Math.sin(a)*d-1,life:25+Math.random()*20,color,size:1.5+Math.random()*2});
   }
+}
+
+// ─── FLOATING TEXT ───
+let ftexts=[];
+function ftext(x,y,text,color='#fff',size=14){
+  ftexts.push({x,y,text,color,size,life:50,oy:y});
+}
+
+// ─── AUDIO (simple Web Audio beeps) ───
+let actx=null;
+function beep(freq=440,len=.08,vol=.05){
+  try{
+    if(!actx)actx=new(window.AudioContext||window.webkitAudioContext)();
+    const o=actx.createOscillator(),g=actx.createGain();
+    o.type='square';o.frequency.value=freq;g.gain.value=vol;
+    o.connect(g);g.connect(actx.destination);
+    o.start();g.gain.exponentialRampToValueAtTime(.001,actx.currentTime+len);
+    o.stop(actx.currentTime+len);
+  }catch(e){}
+}
+
+// ─── INTERACTION ───
+function interact(){
+  const dx=[0,1,0,-1][player.dir],dy=[-1,0,1,0][player.dir];
+  const tx=Math.floor(player.x+dx*.7),ty=Math.floor(player.y+dy*.7);
+
+  // Check entities
+  for(let i=worldEnts.length-1;i>=0;i--){
+    const e=worldEnts[i];
+    if(!e.alive)continue;
+    const dist=Math.hypot(player.x-e.x,player.y-e.y);
+    if(dist<1.3){
+      interactEntity(e,i);
+      return;
+    }
+  }
+
+  // Check tile
+  if(tx>=0&&tx<MW&&ty>=0&&ty<MH){
+    const tile=worldTiles[ty][tx];
+    if(tile.t==='tree'&&tile.hp>0){
+      tile.hp--;GS.res.wood+=1+Math.floor(Math.random()*2);
+      spawnP(tx*TS+TS/2,ty*TS+TS/2,'#8B6914',6);
+      ftext(tx*TS+TS/2,ty*TS,'+🪵',P.wd);
+      beep(220,.06);if(tile.hp<=0){ftext(tx*TS+TS/2,ty*TS-10,'树倒了',P.wd,10);}
+    }else if(tile.t==='rock'&&tile.hp>0){
+      tile.hp--;GS.res.stone+=1+Math.floor(Math.random()*2);
+      spawnP(tx*TS+TS/2,ty*TS+TS/2,'#888',5);
+      ftext(tx*TS+TS/2,ty*TS,'+🪨',P.st);beep(300,.05);
+    }else if(tile.t==='berry'){
+      GS.res.herb+=2;worldTiles[ty][tx]={t:'grass',v:0};
+      spawnP(tx*TS+TS/2,ty*TS+TS/2,'#ff6b6b',4);
+      ftext(tx*TS+TS/2,ty*TS,'+2🌿','#ff6b6b');beep(500,.08);
+    }
+  }
+}
+
+function interactEntity(e,i){
+  switch(e.type){
+    case 'float_rock':
+      if(!e.alive)break;
+      e.alive=false;GS.res.starshard+=1;GS.res.stone+=1;
+      spawnP(e.x*TS,e.y*TS,P.pink,12,3);
+      ftext(e.x*TS,e.y*TS,'✨星之碎片','#ff69b4',16);
+      if(!GS.disc.includes('浮游岩群')){GS.disc.push('浮游岩群');ftext(e.x*TS,e.y*TS-20,'新发现！','#ffd700',12);}
+      beep(600,.1);
+      break;
+    case 'walk_tree':
+      if(!e.alive)break;
+      e.alive=false;GS.res.wood+=3;
+      spawnP(e.x*TS,e.y*TS,'#9b59b6',10,2);
+      ftext(e.x*TS,e.y*TS,'+3🪵活木！','#9b59b6',16);
+      if(!GS.disc.includes('漫步树')){GS.disc.push('漫步树');ftext(e.x*TS,e.y*TS-20,'它在躲避什么...','#c8a0d8',12);}
+      GS.journal.push('遇到了漫步树。它没有攻击，只是离开时留下了一截发光树枝。');
+      beep(400,.15);
+      break;
+    case 'crystal_snail':
+      if(!e.alive)break;
+      e.alive=false;GS.res.crystal+=1;GS.res.herb+=1;
+      spawnP(e.x*TS,e.y*TS,'#88ccff',8,2);
+      ftext(e.x*TS,e.y*TS,'+1💎晶片','#88ccff',14);
+      GS.journal.push('晶壳蜗牛留下了晶片。它的壳像活的棱镜。');
+      beep(800,.12);
+      // New snail spawns later
+      setTimeout(()=>{if(worldEnts[i])worldEnts[i].alive=true;},30000);
+      break;
+    case 'memory_jelly':
+      if(!e.alive)break;
+      e.alive=false;
+      spawnP(e.x*TS,e.y*TS,'#aaccff',15,3);
+      ftext(e.x*TS,e.y*TS,'记忆碎片...','#aaddff',14);
+      if(!GS.disc.includes('记忆水母')){GS.disc.push('记忆水母');}
+      GS.journal.push('触碰了记忆水母。看到了前领主在写日记。');
+      // Give a journal entry as memory
+      playerSay('"抬头看天"——是谁在说？','#aaddff');
+      beep(350,.2);
+      break;
+    case 'mirror_butterfly':
+      if(!e.alive||!e.butterflies)break;
+      // Catch one butterfly
+      e.butterflies.pop();
+      GS.res.crystal+=1;
+      spawnP(e.x*TS,e.y*TS,'#ffd700',6,2);
+      ftext(e.x*TS,e.y*TS,'+1💎','#ffd700',14);
+      if(!GS.disc.includes('镜面蝶')){GS.disc.push('镜面蝶');ftext(e.x*TS,e.y*TS-20,'翅膀倒映着未来...','#fff',12);}
+      beep(700,.1);
+      if(e.butterflies.length===0)e.alive=false;
+      break;
+    case 'void_merchant':
+      if(!e.alive)break;
+      // Trade with void merchant
+      if(GS.res.herb>=1){GS.res.herb-=1;GS.res.crystal+=2;
+        spawnP(e.x*TS,e.y*TS,'#9b6fb0',8,2);
+        ftext(e.x*TS,e.y*TS,'交易完成 +2💎','#9b6fb0',14);
+      }else{playerSay('没有可以交换的东西...','#888');}
+      if(!GS.disc.includes('虚空商贩')){GS.disc.push('虚空商贩');GS.journal.push('遇到了虚空商贩。它不说话——只交易。');}
+      beep(250,.15);
+      break;
+  }
+}
+
+// ─── BUILDING ───
+function tryBuildHere(bid){
+  const def=BDEFS[bid];if(!def||builtSet.includes(bid))return false;
+  if(def.need&&!GS.flags[def.need])return false;
+  for(const[k,v]of Object.entries(def.cost)){if((GS.res[k]||0)<v)return false;}
+  // Find a valid spot near player in home area
+  const px=Math.round(player.x),py=Math.round(player.y);
+  let bx=px,by=py;
+  // check if tile is valid
+  if(bx<0||bx>=MW||by<0||by>=MH)return false;
+  const tile=worldTiles[by][bx];
+  if(!def.buildOn.includes(tile.t))return false;
+  // check no existing building
+  if(buildings.some(b=>Math.abs(b.x-bx)<1.5&&Math.abs(b.y-by)<1.5))return false;
+
+  for(const[k,v]of Object.entries(def.cost))GS.res[k]-=v;
+  buildings.push({type:bid,x:bx,y:by});builtSet.push(bid);
+  spawnP(bx*TS+TS/2,by*TS+TS/2,'#ffd700',15,3);
+  ftext(bx*TS+TS/2,by*TS,'🏗️'+def.name,'#ffd700',16);
+  beep(500,.15);setTimeout(()=>beep(700,.15),100);
+  if(bid==='watch')GS.flags.ch1=true;
+  if(bid==='storage')GS.flags.firstExp=true;
+  return true;
+}
+
+// ─── INPUT ───
+const gc=document.getElementById('gc');
+gc.addEventListener('touchstart',e=>{
+  e.preventDefault();touchStart={x:e.touches[0].clientX,y:e.touches[0].clientY};
 });
-
-// ═══════════════════ BOOT ═══════════════════
-async function boot(){
-  if(load()){UI();R.draw();announce('📂 继续冒险');
-    if(!GS.flags.firstExp){setTimeout(async()=>{await dlg('莉莉','🧝‍♀️','"准备好出发了吗？点击底部 [🗺️远征] 按钮！"');},800);}
-  }else{
-    await sleep(400);
-    await dlg('???','💫',`你睁开眼睛。\n\n天空是陌生的紫色。地面触感不像泥土。你不记得自己是谁，不记得怎么来的。\n\n但你记得一件事——这里不是地球。\n\n远处有什么东西在半空中漂浮。粉色微光，像呼吸一样明灭。\n\n一个声音从背后传来：`);
-    await dlg('莉莉','🧝‍♀️',`"你终于醒了！"\n\n银发精灵少女蹲在你面前，绿色眼睛里满是惊喜。\n\n"我是莉莉。在这里住了三年——你是第一个活着醒过来的。"\n\n她笑了笑，但笑意没有到眼底："上次那个醒来的人...算了不说这个。总之你现在需要一个家。"\n\n她指向远处一片空地。一间破旧但尚可使用的小屋。`);
-    await dlg('莉莉','🧝‍♀️',`"那是前任领主留下的——他在日记里写满了关于这个世界的研究。但后来...他消失了。最后一页日记只有一行字——"\n\n她顿了顿。\n\n"'它知道我在看它。'"\n\n"你准备好出发了吗？点击底部 [🗺️远征] 去东边看看吧。"`);
-    GM.addJrnl('我叫不出名字。莉莉说我"活着醒了"——这意味着别人来过但没醒。前领主的最后一页写着"它知道我在看它"。');
-    GS.flags.tut=true;UI();R.draw();save();
+gc.addEventListener('touchmove',e=>{
+  e.preventDefault();if(!touchStart)return;
+  const dx=e.touches[0].clientX-touchStart.x,dy=e.touches[0].clientY-touchStart.y;
+  const dist=Math.hypot(dx,dy);
+  if(dist>15){touchDir={x:dx/dist,y:dy/dist};}
+});
+gc.addEventListener('touchend',e=>{
+  e.preventDefault();
+  if(touchDir&&Math.hypot(touchDir.x,touchDir.y)>0.3){
+    // Swipe direction
+  }else if(touchStart){
+    // Tap = interact
+    interact();
   }
-  // Heartbeat loop for day progress
-  setInterval(()=>{R.draw();UI();save();},15000);
+  touchDir=null;touchStart=null;
+});
+gc.addEventListener('mousedown',e=>{touchStart={x:e.clientX,y:e.clientY};});
+gc.addEventListener('mousemove',e=>{if(touchStart){const dx=e.clientX-touchStart.x,dy=e.clientY-touchStart.y;const d=Math.hypot(dx,dy);if(d>15)touchDir={x:dx/d,y:dy/d};}});
+gc.addEventListener('mouseup',e=>{
+  if(touchDir&&Math.hypot(touchDir.x,touchDir.y)>0.3){}else if(touchStart){
+    const d=Math.hypot(e.clientX-touchStart.x,e.clientY-touchStart.y);
+    if(d<10)interact();
+  }
+  touchDir=null;touchStart=null;
+});
+window.addEventListener('keydown',e=>{held[e.key]=true;if(e.key===' '||e.key==='e')interact();if(e.key==='b'){const b=getBuildable()[0];if(b)tryBuildHere(b);}e.preventDefault();});
+window.addEventListener('keyup',e=>{held[e.key]=false;});
+
+function getBuildable(){
+  return Object.keys(BDEFS).filter(bid=>!builtSet.includes(bid)&&(!BDEFS[bid].need||GS.flags[BDEFS[bid].need])&&Object.entries(BDEFS[bid].cost).every(([k,v])=>(GS.res[k]||0)>=v));
 }
-window.addEventListener('resize',()=>R.draw());
-boot();
-setInterval(()=>{R.draw();UI();},1000);
+
+// ─── UPDATE ───
+function update(){
+  // Movement
+  let mx=0,my=0;
+  if(touchDir){mx=touchDir.x;my=touchDir.y;}
+  if(held['ArrowUp']||held['w']){my=-1;touchDir=null;}
+  if(held['ArrowDown']||held['s']){my=1;touchDir=null;}
+  if(held['ArrowLeft']||held['a']){mx=-1;touchDir=null;}
+  if(held['ArrowRight']||held['d']){mx=1;touchDir=null;}
+
+  if(mx!==0||my!==0){
+    const len=Math.hypot(mx,my);mx/=len;my/=len;
+    player.vx+=mx*0.4;player.vy+=my*0.4;
+    if(Math.abs(mx)>Math.abs(my))player.dir=mx>0?1:3;
+    else player.dir=my>0?2:0;
+  }else{
+    player.vx*=0.85;player.vy*=0.85;
+    if(Math.abs(player.vx)<.05)player.vx=0;
+    if(Math.abs(player.vy)<.05)player.vy=0;
+  }
+  player.vx=Math.max(-player.speed,Math.min(player.speed,player.vx));
+  player.vy=Math.max(-player.speed,Math.min(player.speed,player.vy));
+
+  // Apply movement with collision
+  let nx=player.x+player.vx*0.016,ny=player.y+player.vy*0.016;
+  const margin=0.25;
+  for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){
+    const tx=Math.floor(nx+dx*margin),ty=Math.floor(ny+dy*margin);
+    if(tx<0||tx>=MW||ty<0||ty>=MH)continue;
+    const tile=worldTiles[ty][tx];
+    if(['water','tree'].includes(tile.t)&&(tile.t!=='tree'||tile.hp>0)){
+      const cx=tx+.5,cy=ty+.5;
+      if(Math.abs(nx+dx*margin-cx)<.4&&Math.abs(ny+dy*margin-cy)<.4){
+        if(Math.abs(nx-cx)<Math.abs(ny-cy))ny=cy+Math.sign(ny-cy)*.4;
+        else nx=cx+Math.sign(nx-cx)*.4;
+      }
+    }
+  }
+  // Building collision
+  for(const b of buildings){
+    const bx=b.x+.5,by=b.y+.5;
+    if(Math.abs(nx-bx)<.35&&Math.abs(ny-by)<.35){
+      if(Math.abs(nx-bx)<Math.abs(ny-by))ny=by+Math.sign(ny-by)*.35;
+      else nx=bx+Math.sign(nx-bx)*.35;
+    }
+  }
+
+  player.x=Math.max(.3,Math.min(MW-.3,nx));
+  player.y=Math.max(.3,Math.min(MH-.3,ny));
+
+  // Time
+  GS.todTimer++;
+  if(GS.todTimer>GS.dayLen){
+    GS.todTimer=0;
+    const tCycle=['morning','day','dusk','night'];
+    const idx=tCycle.indexOf(GS.tod);
+    GS.tod=tCycle[(idx+1)%4];
+    if(GS.tod==='morning'){GS.day++;
+      if(!GS.flags.dreamHad&&GS.day>=2){GS.flags.dreamHad=true;GS.flags.firstChange=true;
+        GS.traits.push('蓝荧之触');GS.journal.push('做了梦。梦里有个声音。醒来时手指会发光。');
+        playerSay('手指...在发光？','#aaccff');}
+      if(GS.day>=2&&GS.flags.ch1&&!GS.flags.firstNight){GS.flags.firstNight=true;GS.journal.push('森林在呼唤。是时候深入探索了。');}
+    }
+  }
+
+  // Update entities
+  for(const e of worldEnts){
+    if(!e.alive)continue;
+    switch(e.type){
+      case 'float_rock':break;
+      case 'walk_tree':
+        e.phase+=0.008;e.data.moved++;
+        e.x+=Math.sin(e.phase)*0.003;e.y+=Math.cos(e.phase*0.7)*0.002;
+        break;
+      case 'crystal_snail':
+        e.phase+=0.005;
+        const path=e.data.path;if(path){
+          const tgt=path[e.pathIdx];e.x+=(tgt[0]+.5-e.x)*0.008;e.y+=(tgt[1]+.5-e.y)*0.008;
+          if(Math.hypot(e.x-tgt[0]-.5,e.y-tgt[1]-.5)<.3)e.pathIdx=(e.pathIdx+1)%path.length;
+        }
+        break;
+      case 'memory_jelly':
+        e.y+=Math.sin(FR*0.02+e.phase)*0.03;e.x+=Math.cos(FR*0.015+e.phase)*0.02;
+        break;
+      case 'mirror_butterfly':
+        if(e.butterflies)e.butterflies.forEach(b=>{
+          b.dx+=(Math.random()-.5)*0.2;b.dy+=(Math.random()-.5)*0.2;
+          b.dx*=0.98;b.dy*=0.98;
+        });
+        break;
+      case 'void_merchant':
+        if(GS.day>=e.spawnDay&&!e.alive&&Math.random()<0.0005)e.alive=true;
+        if(e.alive&&Math.random()<0.0003)e.alive=false;
+        break;
+    }
+  }
+
+  // Particles
+  particles=particles.filter(p=>{p.x+=p.vx;p.y+=p.vy;p.life--;return p.life>0;});
+  // Floating texts
+  ftexts=ftexts.filter(t=>{t.life--;t.y-=.4;return t.life>0;});
+  // Bubbles
+  if(GS.bubbleTimer>0)GS.bubbleTimer--;
+  if(GS.bubbleTimer<=0)GS.playerBubble=null;
+
+  FR++;
+}
+
+// ─── RENDER ───
+function render(){
+  const c=document.getElementById('gc');
+  const pw=window.innerWidth,ph=window.innerHeight;
+  c.width=pw*2;c.height=ph*2;W=pw;H=ph;
+  const ctx=c.getContext('2d');ctx.scale(2,2);
+  ctx.imageSmoothingEnabled=false;
+
+  // Camera
+  const tcx=player.x*TS-W/2,tcy=player.y*TS-H/2;
+  CX+=(tcx-CX)*0.15;CY+=(tcy-CY)*0.15;
+
+  // Sky color based on time
+  const skyMap={morning:'#5a7a8a',day:'#4a7aaa',dusk:'#c07050',night:'#0a0a25'};
+  ctx.fillStyle=skyMap[GS.tod];ctx.fillRect(0,0,W,H);
+  if(GS.tod==='night'){for(let i=0;i<60;i++){ctx.fillStyle=`rgba(255,255,200,${0.2+Math.sin(i*3+FR*0.01)*0.2})`;ctx.beginPath();ctx.arc((i*137)%W,(i*251)%H*0.5,1.2,0,Math.PI*2);ctx.fill();}}
+
+  // Visible tile range
+  const sx=Math.max(0,Math.floor(CX/TS)-1),sy=Math.max(0,Math.floor(CY/TS)-1);
+  const ex=Math.min(MW,sx+Math.ceil(W/TS)+2),ey=Math.min(MH,sy+Math.ceil(H/TS)+2);
+
+  // Draw tiles
+  for(let y=sy;y<ey;y++)for(let x=sx;x<ex;x++){
+    const px=x*TS-CX,py=y*TS-CY,tile=worldTiles[y][x];
+    drawTile(ctx,px,py,tile);
+  }
+
+  // Draw entities
+  for(const e of worldEnts){
+    if(!e.alive&&e.type!=='void_merchant')continue;
+    const ex=e.x*TS-CX,ey=e.y*TS-CY;
+    if(ex<-TS||ex>W+TS||ey<-TS||ey>H+TS)continue;
+    drawEntity(ctx,ex,ey,e);
+  }
+
+  // Draw buildings
+  for(const b of buildings){
+    const bx=b.x*TS-CX,by=b.y*TS-CY;
+    if(bx<-TS||bx>W+TS||by<-TS||by>H+TS)continue;
+    drawBuilding(ctx,bx,by,b.type);
+  }
+
+  // Draw Lily (NPC) — stands near hut
+  const lilyX=26*TS-CX,lilyY=26.3*TS-CY;
+  drawLily(ctx,lilyX,lilyY);
+
+  // Draw player
+  const plx=player.x*TS-CX,ply=player.y*TS-CY;
+  drawPlayer(ctx,plx,ply);
+
+  // Particles
+  for(const p of particles){
+    ctx.globalAlpha=p.life/40;
+    ctx.fillStyle=p.color;ctx.fillRect(p.x-CX,p.y-CY,p.size,p.size);
+  }
+  ctx.globalAlpha=1;
+
+  // Floating texts
+  ctx.textAlign='center';
+  for(const t of ftexts){
+    ctx.globalAlpha=Math.min(1,t.life/20);
+    ctx.fillStyle=t.color;ctx.font=`bold ${t.size}px sans-serif`;
+    ctx.fillText(t.text,t.x-CX,t.y-CY);
+  }
+  ctx.globalAlpha=1;
+
+  // Player bubble
+  if(GS.playerBubble){
+    const bx=plx+TS/2,by=ply-24;
+    ctx.fillStyle='rgba(0,0,0,.7)';const tw=ctx.measureText(GS.playerBubble).width;
+    const bw=tw+20,bh=26;
+    ctx.beginPath();ctx.roundRect(bx-bw/2,by-bh,bw,bh,8);ctx.fill();
+    ctx.fillStyle='#fff';ctx.font='12px sans-serif';ctx.textAlign='center';
+    ctx.fillText(GS.playerBubble,bx,by-bh+18);
+    // Tail
+    ctx.fillStyle='rgba(0,0,0,.7)';ctx.beginPath();
+    ctx.moveTo(bx-6,by);ctx.lineTo(bx+6,by);ctx.lineTo(bx,by+8);ctx.fill();
+  }
+
+  // Top HUD
+  ctx.fillStyle='rgba(0,0,0,.5)';ctx.fillRect(0,0,W,38);
+  const todEmoji={morning:'☀️',day:'☀️',dusk:'🌅',night:'🌙'};
+  ctx.fillStyle='#fff';ctx.font='13px sans-serif';ctx.textAlign='left';
+  let hud=`${todEmoji[GS.tod]} 第${GS.day}天  `;
+  hud+=`🪵${GS.res.wood} 🪨${GS.res.stone} ✨${GS.res.starshard} 🌿${GS.res.herb} 💎${GS.res.crystal}`;
+  if(GS.flags.ch1)hud='第一章·林中之声  '+hud;
+  else hud='序幕·苏醒  '+hud;
+  ctx.fillText(hud,10,26);
+
+  // Bottom hint
+  const bld=getBuildable();
+  const nearHome=Math.hypot(player.x-27.5,player.y-26.5)<6;
+  if(bld.length>0&&nearHome){
+    ctx.fillStyle='rgba(0,0,0,.4)';ctx.fillRect(0,H-32,W,32);
+    ctx.fillStyle='#ffd700';ctx.font='11px sans-serif';ctx.textAlign='center';
+    ctx.fillText(`按B键 / 点击建造 可建造：${bld.map(id=>BDEFS[id].name).join(', ')}`,W/2,H-10);
+  }
+
+  // Traits display
+  if(GS.traits.length>0){
+    ctx.fillStyle='rgba(0,0,0,.5)';ctx.fillRect(W-130,38,130,GS.traits.length*20+8);
+    ctx.fillStyle='#aaddff';ctx.font='10px sans-serif';ctx.textAlign='right';
+    GS.traits.forEach((t,i)=>ctx.fillText(t,W-6,56+i*18));
+  }
+}
+
+function drawTile(ctx,x,y,tile){
+  switch(tile.t){
+    case 'grass':ctx.fillStyle=[P.gr1,P.gr2,P.gr3,P.gr1][tile.v];ctx.fillRect(x,y,TS,TS);break;
+    case 'grass_home':ctx.fillStyle='rgba(60,90,55,.6)';ctx.fillRect(x,y,TS,TS);
+      ctx.strokeStyle='rgba(200,164,92,.08)';ctx.strokeRect(x+.5,y+.5,TS-1,TS-1);break;
+    case 'water':ctx.fillStyle=P.wt;ctx.fillRect(x,y,TS,TS);
+      const wv=Math.sin((x+tile.v+FR*0.03)*.5)*4;
+      ctx.fillStyle='rgba(100,180,220,.25)';ctx.fillRect(x,y+TS/2+wv,TS,5);break;
+    case 'bridge':ctx.fillStyle='#8B7355';ctx.fillRect(x,y,TS+1,TS);
+      ctx.fillStyle='#6B5335';for(let i=0;i<5;i++)ctx.fillRect(x+i*12,y,4,TS);break;
+    case 'path':ctx.fillStyle='#9B8B75';ctx.fillRect(x,y,TS,TS);break;
+    case 'tree':ctx.fillStyle=P.gr1;ctx.fillRect(x,y,TS,TS);
+      if(tile.hp>0){ctx.fillStyle='#5a4030';ctx.fillRect(x+20,y+TS-16,8,16);
+        ctx.fillStyle=P.lf2;ctx.beginPath();ctx.arc(x+24,y+TS-22,16,0,Math.PI*2);ctx.fill();
+        ctx.fillStyle=P.lf;ctx.beginPath();ctx.arc(x+24,y+TS-24,12,0,Math.PI*2);ctx.fill();}
+      else{ctx.fillStyle='#5a4030';ctx.fillRect(x+22,y+TS-10,4,10);}break;
+    case 'rock':ctx.fillStyle=P.gr1;ctx.fillRect(x,y,TS,TS);
+      if(tile.hp>0){ctx.fillStyle=P.st;ctx.beginPath();
+        ctx.moveTo(x+8,y+TS-4);ctx.lineTo(x+14,y+10);ctx.lineTo(x+30,y+8);ctx.lineTo(x+TS-4,y+TS-10);ctx.lineTo(x+28,y+TS-4);ctx.closePath();ctx.fill();
+        ctx.fillStyle=P.st2;ctx.beginPath();ctx.moveTo(x+16,y+16);ctx.lineTo(x+22,y+12);ctx.lineTo(x+28,y+20);ctx.fill();}break;
+    case 'berry':ctx.fillStyle=P.gr1;ctx.fillRect(x,y,TS,TS);ctx.fillStyle='#3a6c2f';ctx.fillRect(x+16,y+20,12,28);
+      ctx.fillStyle='#ff4444';ctx.beginPath();ctx.arc(x+20,y+24,7,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#ff5555';ctx.beginPath();ctx.arc(x+28,y+20,6,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#ff4444';ctx.beginPath();ctx.arc(x+14,y+26,5,0,Math.PI*2);ctx.fill();break;
+    case 'glitch':const gx2=Math.floor(Math.random()*4);
+      ctx.fillStyle=['#ff00ff','#00ffff','#ffff00','#ff0000'][gx2];ctx.fillRect(x,y,TS/2,TS/2);
+      ctx.fillRect(x+TS/2,y+TS/2,TS/2,TS/2);ctx.fillStyle='#000';ctx.fillRect(x+TS/2,y,TS/2,TS/2);ctx.fillRect(x,y+TS/2,TS/2,TS/2);break;
+  }
+}
+
+function drawEntity(ctx,x,y,e){
+  switch(e.type){
+    case 'float_rock':if(!e.alive)return;
+      const fy=Math.sin(FR*0.04+e.phase)*6;
+      ctx.fillStyle='rgba(0,0,0,.15)';ctx.beginPath();ctx.ellipse(x+24,y+TS-6,12,4,0,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='rgba(255,105,180,.12)';ctx.beginPath();ctx.arc(x+24,y+18+fy,20,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle=P.fp;ctx.beginPath();ctx.moveTo(x+12,y+28+fy);ctx.lineTo(x+6,y+10+fy);ctx.lineTo(x+24,y+6+fy);ctx.lineTo(x+TS-6,y+10+fy);ctx.lineTo(x+TS-8,y+28+fy);ctx.closePath();ctx.fill();
+      ctx.fillStyle=P.fl;ctx.beginPath();ctx.moveTo(x+12,y+14+fy);ctx.lineTo(x+24,y+8+fy);ctx.lineTo(x+34,y+16+fy);ctx.fill();break;
+    case 'walk_tree':if(!e.alive)return;
+      const mx=Math.sin(FR*0.02+e.phase)*3;
+      ctx.fillStyle='rgba(0,0,0,.15)';ctx.beginPath();ctx.ellipse(x+24+mx,y+TS-4,14,5,0,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle=P.wp;ctx.fillRect(x+20+mx,y+TS-18,10,TS-12);
+      ctx.fillStyle=P.wl2;ctx.beginPath();ctx.arc(x+25+mx,y+TS-26,18,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='rgba(180,140,220,.6)';ctx.beginPath();ctx.arc(x+25+mx,y+TS-18,8,0,Math.PI*2);ctx.fill();break;
+    case 'crystal_snail':if(!e.alive)return;
+      ctx.fillStyle='rgba(0,0,0,.2)';ctx.beginPath();ctx.ellipse(x+24,y+TS-4,10,3,0,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#aaccff';ctx.beginPath();ctx.arc(x+24,y+TS-12,16,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#cce0ff';ctx.beginPath();ctx.arc(x+22,y+TS-14,10,0,Math.PI*2);ctx.fill();
+      const prism=FR*0.02;
+      for(let i=0;i<3;i++){const a=prism+i*Math.PI*2/3;
+        ctx.fillStyle=`rgba(255,255,255,${0.3+Math.sin(FR*0.05+i)*0.2})`;ctx.beginPath();ctx.arc(x+24+Math.cos(a)*6,y+TS-12+Math.sin(a)*4,3,0,Math.PI*2);ctx.fill();}
+      // Tentacles
+      ctx.strokeStyle='#88aacc';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x+14,y+TS-6);
+      ctx.quadraticCurveTo(x+10,y+TS,Math.cos(FR*0.03)*4+x+12,y+TS+2);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(x+34,y+TS-6);ctx.quadraticCurveTo(x+38,y+TS,Math.cos(FR*0.03+1)*4+x+36,y+TS+2);ctx.stroke();break;
+    case 'memory_jelly':if(!e.alive)return;
+      ctx.fillStyle='rgba(150,200,255,.2)';ctx.beginPath();ctx.arc(x+24,y+24,20,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='rgba(200,220,255,.4)';ctx.beginPath();ctx.arc(x+24,y+28,8,0,Math.PI);ctx.fill();
+      for(let i=0;i<5;i++){const a=i*Math.PI*2/5+FR*0.02;
+        ctx.fillStyle='rgba(180,210,255,.5)';ctx.beginPath();
+        ctx.moveTo(x+24,y+28);ctx.quadraticCurveTo(x+24+Math.cos(a)*12,y+24+Math.sin(a)*20,x+24+Math.cos(a+0.2)*14,y+36+Math.sin(a+0.2)*20);ctx.fill();}break;
+    case 'mirror_butterfly':if(!e.alive)return;
+      if(!e.butterflies)break;
+      for(const b of e.butterflies){
+        const bx2=x+b.dx*12,by2=y+b.dy*12;
+        ctx.save();ctx.translate(bx2,by2);
+        const flp=Math.sin(FR*0.1+b.ph)*0.5;
+        ctx.fillStyle='rgba(255,255,255,.7)';ctx.beginPath();ctx.ellipse(-3*flp,0,5,3,0,0,Math.PI*2);ctx.fill();
+        ctx.fillStyle='rgba(200,220,255,.4)';ctx.beginPath();ctx.ellipse(3*flp,0,5,3,0,0,Math.PI*2);ctx.fill();
+        ctx.restore();
+      }
+      // Glow
+      ctx.fillStyle='rgba(200,220,255,.1)';ctx.beginPath();ctx.arc(x+24,y+24,24,0,Math.PI*2);ctx.fill();break;
+    case 'void_merchant':if(!e.alive)return;
+      ctx.fillStyle='rgba(0,0,0,.3)';ctx.beginPath();ctx.ellipse(x+24,y+TS-4,12,4,0,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#1a1020';ctx.fillRect(x+12,y+4,24,TS-4);
+      ctx.fillStyle='#2a1a30';ctx.beginPath();ctx.moveTo(x+12,y+4);ctx.lineTo(x+36,y+4);ctx.lineTo(x+36,y+12);ctx.lineTo(x+30,y+12);ctx.lineTo(x+24,y);ctx.lineTo(x+18,y+12);ctx.lineTo(x+12,y+12);ctx.closePath();ctx.fill();
+      ctx.fillStyle='rgba(200,180,255,.6)';ctx.fillRect(x+18,y+16,4,4);ctx.fillRect(x+26,y+16,4,4);
+      // Floating items
+      for(let i=0;i<3;i++){ctx.fillStyle=`rgba(200,180,255,${0.2+Math.sin(FR*0.05+i)*0.1})`;ctx.fillRect(x+10+i*12,y+TS-4+Math.sin(FR*0.04+i)*3,8,6);}break;
+  }
+}
+
+function drawBuilding(ctx,x,y,type){
+  ctx.fillStyle='rgba(0,0,0,.2)';ctx.beginPath();ctx.ellipse(x+24,y+TS-2,14,5,0,0,Math.PI*2);ctx.fill();
+  switch(type){
+    case 'hut':ctx.fillStyle=P.wl;ctx.fillRect(x+6,y+14,TS-12,TS-14);
+      ctx.strokeStyle='#6B5335';ctx.lineWidth=1;ctx.strokeRect(x+6,y+14,TS-12,TS-14);
+      ctx.fillStyle=P.rf;ctx.beginPath();ctx.moveTo(x+2,y+14);ctx.lineTo(x+24,y-4);ctx.lineTo(x+TS-2,y+14);ctx.closePath();ctx.fill();
+      ctx.fillStyle='#4a2810';ctx.fillRect(x+18,y+24,12,TS-24);
+      ctx.fillStyle=GS.tod==='night'?'rgba(255,200,100,.4)':'#aaddff';ctx.fillRect(x+8,y+18,8,8);break;
+    case 'storage':ctx.fillStyle='#a08060';ctx.fillRect(x+6,y+14,TS-12,TS-14);
+      ctx.strokeStyle='#6B5335';ctx.strokeRect(x+6,y+14,TS-12,TS-14);
+      ctx.fillStyle='#b89070';ctx.fillRect(x+4,y+10,TS-8,8);
+      ctx.fillStyle='#666';ctx.fillRect(x+8,y+22,TS-16,3);ctx.fillRect(x+8,y+34,TS-16,3);break;
+    case 'craft':ctx.fillStyle='#8a7a60';ctx.fillRect(x+6,y+14,TS-12,TS-14);
+      ctx.fillStyle='#6a5a40';ctx.fillRect(x+6,y+12,TS-12,4);
+      ctx.fillStyle='#4a3a20';ctx.fillRect(x+10,y+18,6,TS-22);ctx.fillRect(x+32,y+18,6,TS-22);break;
+    case 'furnace':ctx.fillStyle='#706050';ctx.fillRect(x+6,y+10,TS-12,TS-18);
+      ctx.fillStyle='#403020';ctx.fillRect(x+10,y+6,TS-20,8);
+      ctx.fillStyle='#ff6600';ctx.beginPath();ctx.arc(x+24,y+TS-8,6,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#ffaa00';ctx.beginPath();ctx.arc(x+24,y+TS-9,3,0,Math.PI*2);ctx.fill();break;
+    case 'garden':ctx.fillStyle='#4a6030';ctx.fillRect(x+4,y+20,TS-8,TS-12);
+      ctx.strokeStyle='#5a4030';ctx.strokeRect(x+4,y+20,TS-8,TS-12);
+      for(let r=0;r<2;r++)for(let c=0;c<2;c++){
+        ctx.fillStyle='#5a4020';ctx.fillRect(x+8+c*18,y+24+r*14,12,10);
+        ctx.fillStyle='#4a8a3a';ctx.fillRect(x+10+c*18,y+26+r*14,2,4);}break;
+    case 'watch':ctx.fillStyle='#807060';ctx.fillRect(x+10,y+12,TS-20,TS-12);
+      ctx.fillStyle='#605040';ctx.fillRect(x+10,y+8,TS-20,6);
+      ctx.fillStyle='#aaddff';ctx.beginPath();ctx.arc(x+24,y+8,6,0,Math.PI*2);ctx.fill();
+      ctx.strokeStyle='#605040';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x+24,y+4);ctx.lineTo(x+24,y-8);ctx.stroke();break;
+  }
+}
+
+function drawPlayer(ctx,x,y){
+  // Shadow
+  ctx.fillStyle='rgba(0,0,0,.2)';ctx.beginPath();ctx.ellipse(x+24,y+TS-2,10,3,0,0,Math.PI*2);ctx.fill();
+  // Legs + shoes
+  ctx.fillStyle='#5a4020';ctx.fillRect(x+10,y+TS-14,10,14);ctx.fillRect(x+28,y+TS-14,10,14);
+  ctx.fillStyle='#3a2810';ctx.fillRect(x+10,y+TS-4,10,4);ctx.fillRect(x+28,y+TS-4,10,4);
+  // Body
+  ctx.fillStyle='#4488cc';ctx.fillRect(x+6,y+14,TS-12,TS-28);
+  // Arms
+  ctx.fillStyle=P.sk;ctx.fillRect(x+2,y+18,6,TS-26);ctx.fillRect(x+TS-8,y+18,6,TS-26);
+  // Head
+  ctx.fillStyle=P.sk;ctx.fillRect(x+10,y+2,TS-20,16);
+  // Hair
+  ctx.fillStyle=P.hr;ctx.fillRect(x+8,y,TS-16,8);
+  // Eyes
+  ctx.fillStyle='#000';ctx.fillRect(x+14,y+8,4,3);ctx.fillRect(x+30,y+8,4,3);
+  // Trait: glowing fingertips
+  if(GS.traits.includes('蓝荧之触')){
+    ctx.fillStyle='rgba(120,170,255,.5)';ctx.fillRect(x+1,y+TS-14,5,4);ctx.fillRect(x+TS-6,y+TS-14,5,4);
+  }
+}
+
+function drawLily(ctx,x,y){
+  ctx.fillStyle='rgba(0,0,0,.2)';ctx.beginPath();ctx.ellipse(x+24,y+TS-2,8,3,0,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#3a2a10';ctx.fillRect(x+12,y+TS-14,8,14);ctx.fillRect(x+28,y+TS-14,8,14);
+  ctx.fillStyle=P.eg;ctx.fillRect(x+8,y+14,TS-16,TS-26);
+  ctx.fillStyle=P.sk;ctx.fillRect(x+10,y+4,TS-20,14);
+  ctx.fillStyle=P.sv;ctx.fillRect(x+6,y,TS-12,8);ctx.fillRect(x+4,y+4,4,8);ctx.fillRect(x+TS-8,y+4,4,8);
+  ctx.fillStyle='#2a5a2a';ctx.fillRect(x+16,y+8,3,3);ctx.fillRect(x+28,y+8,3,3);
+  ctx.fillStyle=P.sk;ctx.fillRect(x+3,y+6,4,8);ctx.fillRect(x+TS-7,y+6,4,8);
+}
+
+// ─── GAME LOOP ───
+function loop(){
+  update();render();requestAnimationFrame(loop);
+}
+
+// ─── SAVE/LOAD ───
+function save(){localStorage.setItem('isekai_v5',JSON.stringify({day:GS.day,tod:GS.tod,res:GS.res,traits:GS.traits,disc:GS.disc,journal:GS.journal,flags:GS.flags,lilyAff:GS.lilyAff,lilyTalks:GS.lilyTalks,expCompleted:GS.expCompleted,builtSet,player:{x:player.x,y:player.y}}));}
+function load(){const r=localStorage.getItem('isekai_v5');if(!r)return false;try{const d=JSON.parse(r);
+  Object.assign(GS,{...GS,day:d.day,tod:d.tod,res:d.res,traits:d.traits,disc:d.disc,journal:d.journal,flags:d.flags,lilyAff:d.lilyAff||0,lilyTalks:d.lilyTalks||0,expCompleted:d.expCompleted||[]});
+  builtSet=d.builtSet||['hut'];buildings=d.builtSet?d.builtSet.map(t=>({type:t,x:27+buildings.length,y:28})):[{type:'hut',x:27,y:25}];
+  if(d.player){player.x=d.player.x;player.y=d.player.y;}
+  save();return true;}catch(e){return false;}
+}
+
+// ─── BOOT ───
+genWorld();
+if(!load()){
+  playerSay('这是...哪里？','#ffd700');
+  GS.journal.push('在一个陌生的世界醒来。有一个精灵少女说这里是"边缘之地"。');
+}
+setInterval(save,10000);
+loop();
 </script></body></html>
