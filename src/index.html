@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>🌍 异世界开拓者</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#1a1a2e;overflow:hidden;font-family:'Courier New',monospace;touch-action:none}
+canvas{display:block;image-rendering:pixelated}
+#ui{position:fixed;bottom:0;left:0;right:0;pointer-events:none;z-index:10}
+#hotbar{display:flex;justify-content:center;gap:4px;padding:8px;background:rgba(20,15,10,0.85);border-top:2px solid #5a4a3a}
+.slot{width:48px;height:48px;background:#3a3028;border:2px solid #6a5a4a;position:relative;border-radius:4px}
+.slot .item{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:24px}
+.slot .count{position:absolute;bottom:2px;right:4px;font-size:11px;color:#ffd700;text-shadow:1px 1px 0 #000}
+.slot.selected{border-color:#ffd700;box-shadow:0 0 8px rgba(255,215,0,0.5)}
+#msg{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);color:#fff;font-size:18px;text-align:center;text-shadow:2px 2px 0 #000;opacity:0;transition:opacity 0.3s;pointer-events:none}
+#info{position:fixed;top:8px;left:8px;color:#ddd;font-size:12px;text-shadow:1px 1px 0 #000;pointer-events:none;line-height:1.5}
+#info span{display:block}
+#controls{position:fixed;bottom:80px;right:12px;display:flex;flex-direction:column;gap:6px;pointer-events:auto}
+#controls button{width:44px;height:44px;background:rgba(0,0,0,0.6);border:2px solid #6a5a4a;color:#ffd700;font-size:18px;border-radius:6px;cursor:pointer}
+.mobile-ctrl{position:fixed;bottom:80px;left:12px;display:none;pointer-events:auto}
+.mobile-ctrl .row{display:flex;gap:4px;margin-bottom:4px}
+.mobile-ctrl button{width:52px;height:52px;background:rgba(0,0,0,0.5);border:2px solid #6a5a4a;color:#fff;font-size:22px;border-radius:8px;cursor:pointer;user-select:none}
+.mobile-ctrl .spacer{width:52px;height:52px;visibility:hidden}
+@media(max-width:768px){.mobile-ctrl{display:block}}
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+<div id="info">
+  <span id="info-time">☀️ 早上 6:00</span>
+  <span id="info-loc">📍 领地</span>
+  <span id="info-level">🏠 领地 Lv.1</span>
+</div>
+<div id="msg"></div>
+<div id="ui">
+  <div id="hotbar">
+    <div class="slot selected" data-slot="0"><div class="item">🪓</div></div>
+    <div class="slot" data-slot="1"><div class="item">🪨</div><div class="count" id="cnt-stone">0</div></div>
+    <div class="slot" data-slot="2"><div class="item">🪵</div><div class="count" id="cnt-wood">0</div></div>
+    <div class="slot" data-slot="3"><div class="item">✨</div><div class="count" id="cnt-starshard">0</div></div>
+    <div class="slot" data-slot="4"><div class="item">🌿</div><div class="count" id="cnt-herb">0</div></div>
+    <div class="slot" data-slot="5"><div class="item">🔨</div></div>
+  </div>
+</div>
+<div class="mobile-ctrl" id="mobile_ctrl">
+  <div class="row"><button class="spacer"></button><button onclick="Game.input('up')">▲</button><button class="spacer"></button></div>
+  <div class="row"><button onclick="Game.input('left')">◀</button><button onclick="Game.input('act')">⚡</button><button onclick="Game.input('right')">▶</button></div>
+  <div class="row"><button class="spacer"></button><button onclick="Game.input('down')">▼</button><button onclick="Game.input('build')">🏗️</button></div>
+</div>
+<div id="controls">
+  <button onclick="Game.input('act')" title="采集/对话">⚡</button>
+  <button onclick="Game.input('build')" title="建造">🏗️</button>
+</div>
+<script>
+// ======================== 异世界开拓者 MVP ========================
+const TILE = 32;
+const WORLD_W = 60, WORLD_H = 40;
+
+// --- Game State ---
+const S = {
+  player: { x: 16, y: 18, vx: 0, vy: 0, speed: 3, facing: 0 },
+  camera: { x: 0, y: 0 },
+  keys: {},
+  time: 360, // minutes from 6:00 (360=noon, 1080=midnight)
+  daySpeed: 0.5,
+  inventory: { stone: 0, wood: 0, starshard: 0, herb: 0 },
+  hotbarSel: 0,
+  buildings: [{ x: 15, y: 17, type: 'hut' }],
+  messages: [],
+  msgTimer: 0,
+  discoveries: [],
+  territoryLevel: 1,
+  territoryRadius: 4,
+  particles: [],
+  npcs: [{ x: 15, y: 19, type: 'elf', name: '精灵助手 莉莉', dialogs: [
+    "你终于醒了！欢迎来到这个世界~",
+    "东边有一些奇怪的石头... 它们在飞！",
+    "多收集一些材料，我们可以建造更多东西。",
+    "天快黑了，注意安全哦！",
+    "这片土地曾经属于另一位领主..."
+  ], dialogIdx: 0 }],
+  worldData: null,
+  buildMode: false,
+  buildType: null,
+  buildReqs: { 'storage': { wood: 5, stone: 3 } },
+};
+
+// --- World Gen ---
+function genWorld() {
+  const w = new Array(WORLD_H).fill(null).map(() => new Array(WORLD_W).fill(null));
+  for (let y = 0; y < WORLD_H; y++) {
+    for (let x = 0; x < WORLD_W; x++) {
+      w[y][x] = { tile: 'grass', variant: 0 };
+    }
+  }
+  // River
+  for (let y = 10; y < 28; y++) {
+    for (let dx = -1; dx <= 1; dx++) {
+      const x = 28 + dx;
+      if (x >= 0 && x < WORLD_W) { w[y][x] = { tile: 'water', variant: 0 }; }
+    }
+  }
+  // Bridge
+  w[18][28] = { tile: 'bridge', variant: 0 };
+  w[19][28] = { tile: 'bridge', variant: 0 };
+
+  // Trees
+  const trees = [[8,12],[10,10],[12,14],[6,16],[20,8],[22,10],[25,13],[35,15],[38,12],[40,10],[42,16],[45,14],[48,9],[50,18],[30,22],[32,20],[34,24],[8,25],[10,28],[14,26]];
+  trees.forEach(([x,y]) => { w[y][x] = { tile: 'tree', variant: (x+y)%3, harvested: false }; });
+
+  // Rocks
+  const rocks = [[9,20],[11,22],[13,18],[7,24],[22,15],[24,18],[36,20],[38,25],[43,22],[46,20],[33,26],[10,30]];
+  rocks.forEach(([x,y]) => { w[y][x] = { tile: 'rock', variant: (x+y)%2, harvested: false }; });
+
+  // Berry bushes
+  [[14,20],[16,22],[20,25],[23,20],[26,22],[44,18],[47,22]].forEach(([x,y]) => {
+    w[y][x] = { tile: 'berry', variant: 0, harvested: false };
+  });
+
+  // ANOMALY: Floating rocks (east of river)
+  for (let y = 14; y < 30; y += 3) {
+    for (let x = 33; x < 42; x += 4) {
+      if ((x + y) % 5 === 0 && !(x >= 37 && x <= 39 && y >= 20 && y <= 24)) {
+        w[y][x] = { tile: 'float_rock', variant: (x+y)%3, harvested: false, offset: Math.random()*Math.PI*2 };
+      }
+    }
+  }
+
+  // ANOMALY: Walking trees (far east)
+  [[52,10],[54,12],[52,16],[55,20],[53,25],[56,28]].forEach(([x,y]) => {
+    w[y][x] = { tile: 'walk_tree', variant: 0, phase: Math.random()*Math.PI*2, harvested: false };
+  });
+
+  // Home area - cleared
+  for (let y = 14; y <= 22; y++)
+    for (let x = 12; x <= 18; x++)
+      if (w[y][x].tile === 'tree' || w[y][x].tile === 'rock') w[y][x] = { tile: 'grass', variant: 0 };
+
+  // Dirt path from home to bridge
+  for (let x = 18; x <= 28; x++) w[18][x] = { tile: 'path', variant: 0 };
+
+  // Mystery edge (far east)
+  for (let y = 5; y < 35; y++)
+    for (let x = 57; x < 60; x++)
+      w[y][x] = { tile: 'glitch', variant: 0 };
+
+  return w;
+}
+
+S.worldData = genWorld();
+
+// --- Particles ---
+function spawnParticles(x, y, color, count) {
+  for (let i = 0; i < count; i++) {
+    S.particles.push({
+      x, y, color,
+      vx: (Math.random()-0.5)*4, vy: (Math.random()-0.5)*4 - 2,
+      life: 30 + Math.random()*20, maxLife: 50
+    });
+  }
+}
+
+// --- Messages ---
+function showMsg(text, color='#ffffff') {
+  S.messages.push({ text, color, timer: 120 });
+}
+
+// --- Building ---
+function canBuild(type) {
+  const req = S.buildReqs[type];
+  if (!req) return false;
+  return S.inventory.wood >= (req.wood||0) && S.inventory.stone >= (req.stone||0);
+}
+
+function tryBuild(type) {
+  if (!canBuild(type)) {
+    const req = S.buildReqs[type];
+    showMsg(`需要 ${req.wood}🪵 + ${req.stone}🪨`, '#ff6b6b');
+    return false;
+  }
+  S.inventory.wood -= S.buildReqs[type].wood || 0;
+  S.inventory.stone -= S.buildReqs[type].stone || 0;
+  // Place building at player position + 1 tile in facing direction
+  const dx = [0,1,0,-1][S.player.facing];
+  const dy = [-1,0,1,0][S.player.facing];
+  const bx = Math.floor(S.player.x) + dx;
+  const by = Math.floor(S.player.y) + dy;
+  S.buildings.push({ x: bx, y: by, type });
+  showMsg('建造完成！🏗️', '#ffd700');
+  updateUI();
+  return true;
+}
+
+// --- NPC Interaction ---
+function talkNPC(npc) {
+  const msg = npc.dialogs[npc.dialogIdx % npc.dialogs.length];
+  npc.dialogIdx++;
+  showMsg(`"${msg}"`, '#88ff88');
+  spawnParticles(npc.x*TILE+TILE/2, npc.y*TILE+TILE/2, '#88ff88', 8);
+}
+
+// --- Input ---
+Game = {
+  input(action) {
+    switch(action) {
+      case 'act': {
+        const px = Math.floor(S.player.x + 0.5);
+        const py = Math.floor(S.player.y + 0.5);
+        const dx = [0,1,0,-1][S.player.facing];
+        const dy = [-1,0,1,0][S.player.facing];
+        const tx = px + dx, ty = py + dy;
+        // Check NPC
+        const npc = S.npcs.find(n => {
+          const dist = Math.abs(tx - n.x) + Math.abs(ty - n.y);
+          return dist <= 1;
+        });
+        if (npc) { talkNPC(npc); return; }
+        // Check action on tile
+        if (tx >= 0 && tx < WORLD_W && ty >= 0 && ty < WORLD_H) {
+          const tile = S.worldData[ty][tx];
+          if (tile.tile === 'tree' && !tile.harvested) {
+            tile.harvested = true;
+            S.inventory.wood += 2;
+            spawnParticles(tx*TILE+TILE/2, ty*TILE+TILE/2, '#8B6914', 6);
+            showMsg('+2 🪵 木材', '#c4956a');
+            updateUI();
+          } else if (tile.tile === 'rock' && !tile.harvested) {
+            tile.harvested = true;
+            S.inventory.stone += 2;
+            spawnParticles(tx*TILE+TILE/2, ty*TILE+TILE/2, '#808080', 6);
+            showMsg('+2 🪨 石头', '#a0a0a0');
+            updateUI();
+          } else if (tile.tile === 'float_rock' && !tile.harvested) {
+            tile.harvested = true;
+            S.inventory.starshard += 1;
+            S.inventory.stone += 1;
+            spawnParticles(tx*TILE+TILE/2, ty*TILE+TILE/2, '#ff69b4', 12);
+            showMsg('+1 ✨ 星之碎片！这是什么？！', '#ff69b4');
+            if (!S.discoveries.includes('float_rock')) {
+              S.discoveries.push('float_rock');
+              showMsg('🔍 新发现：浮游岩群 — 在满月时会微微炽热', '#ffd700');
+            }
+            updateUI();
+          } else if (tile.tile === 'berry' && !tile.harvested) {
+            tile.harvested = true;
+            S.inventory.herb += 2;
+            spawnParticles(tx*TILE+TILE/2, ty*TILE+TILE/2, '#ff6b6b', 4);
+            showMsg('+2 🌿 野莓', '#ff6b6b');
+            updateUI();
+          } else if (tile.tile === 'walk_tree' && !tile.harvested) {
+            tile.harvested = true;
+            S.inventory.wood += 3;
+            spawnParticles(tx*TILE+TILE/2, ty*TILE+TILE/2, '#9b59b6', 10);
+            showMsg('+3 🪵 活木！树...在动？', '#9b59b6');
+            if (!S.discoveries.includes('walk_tree')) {
+              S.discoveries.push('walk_tree');
+              showMsg('🔍 新发现：漫步树 — 昨天它还不在这个位置...', '#ffd700');
+            }
+            updateUI();
+          }
+        }
+        break;
+      }
+      case 'build': {
+        const canStorage = canBuild('storage');
+        if (canStorage) {
+          tryBuild('storage');
+        } else {
+          const req = S.buildReqs['storage'];
+          showMsg(`可建造：仓库 (${req.wood}🪵+${req.stone}🪨)`, '#ffd700');
+        }
+        break;
+      }
+    }
+  }
+};
+
+// Keyboard
+window.addEventListener('keydown', e => {
+  S.keys[e.key] = true;
+  if (e.key === ' ' || e.key === 'e') { e.preventDefault(); Game.input('act'); }
+  if (e.key === 'b') { e.preventDefault(); Game.input('build'); }
+  if (e.key >= '1' && e.key <= '6') { S.hotbarSel = parseInt(e.key)-1; }
+  e.preventDefault();
+});
+window.addEventListener('keyup', e => { S.keys[e.key] = false; });
+
+// Mouse / Touch for mobile
+const canvas = document.getElementById('game');
+canvas.addEventListener('click', e => {
+  const rect = canvas.getBoundingClientRect();
+  const cx = rect.width / 2, cy = rect.height / 2;
+  const dx = e.clientX - rect.left - cx, dy = e.clientY - rect.top - cy;
+  if (Math.abs(dx) < 40 && Math.abs(dy) < 40) Game.input('act');
+});
+
+// --- Update ---
+function updatePlayer() {
+  let mx = 0, my = 0;
+  if (S.keys['ArrowUp'] || S.keys['w']) my = -1;
+  if (S.keys['ArrowDown'] || S.keys['s']) my = 1;
+  if (S.keys['ArrowLeft'] || S.keys['a']) mx = -1;
+  if (S.keys['ArrowRight'] || S.keys['d']) mx = 1;
+
+  if (mx !== 0 || my !== 0) {
+    const len = Math.sqrt(mx*mx + my*my);
+    mx /= len; my /= len;
+    S.player.vx = mx * S.player.speed;
+    S.player.vy = my * S.player.speed;
+    if (Math.abs(mx) > Math.abs(my)) S.player.facing = mx > 0 ? 1 : 3;
+    else S.player.facing = my > 0 ? 2 : 0;
+  } else {
+    S.player.vx *= 0.8; S.player.vy *= 0.8;
+    if (Math.abs(S.player.vx) < 0.1) S.player.vx = 0;
+    if (Math.abs(S.player.vy) < 0.1) S.player.vy = 0;
+  }
+
+  let nx = S.player.x + S.player.vx * 0.016;
+  let ny = S.player.y + S.player.vy * 0.016;
+
+  // Collision
+  const margin = 0.3;
+  const checkTiles = [[0,0],[1,0],[-1,0],[0,1],[0,-1],[1,1],[-1,1],[1,-1],[-1,-1]];
+  for (const [dx, dy] of checkTiles) {
+    const tx = Math.floor(nx + dx * margin);
+    const ty = Math.floor(ny + dy * margin);
+    if (tx < 0 || tx >= WORLD_W || ty < 0 || ty >= WORLD_H) continue;
+    const tile = S.worldData[ty][tx];
+    if (['water','tree','rock','glitch'].includes(tile.tile)) {
+      if (tile.harvested && (tile.tile === 'tree' || tile.tile === 'rock')) continue;
+      // Block movement
+      const cx = tx + 0.5, cy = ty + 0.5;
+      const px = nx + dx * margin, py = ny + dy * margin;
+      if (Math.abs(px - cx) < 0.5 && Math.abs(py - cy) < 0.5) {
+        if (tile.tile === 'water') {
+          if (Math.abs(px - cx) > Math.abs(py - cy)) nx = cx + Math.sign(px - cx) * 0.5;
+          else ny = cy + Math.sign(py - cy) * 0.5;
+        } else {
+          if (Math.abs(px - cx) > Math.abs(py - cy)) nx = cx + Math.sign(px - cx) * 0.55;
+          else ny = cy + Math.sign(py - cy) * 0.55;
+        }
+      }
+    }
+  }
+
+  S.player.x = Math.max(0.5, Math.min(WORLD_W - 0.5, nx));
+  S.player.y = Math.max(0.5, Math.min(WORLD_H - 0.5, ny));
+
+  // Check if near home
+  const homeDist = Math.sqrt((S.player.x-15.5)**2 + (S.player.y-17.5)**2);
+  const nearHome = homeDist < S.territoryRadius;
+
+  // Check if near glitch edge
+  if (S.player.x > 55 && !S.discoveries.includes('glitch')) {
+    S.discoveries.push('glitch');
+    showMsg('⚠️ 画面开始出现像素花屏...这里是什么地方？', '#ff4444');
+  }
+}
+
+function updateTime() {
+  S.time += S.daySpeed * 0.016;
+  if (S.time >= 1440) { S.time = 360; showMsg('☀️ 新的一天开始了！', '#ffd700'); }
+}
+
+// --- Render ---
+function drawTile(ctx, x, y, tile) {
+  const px = x * TILE, py = y * TILE;
+  ctx.imageSmoothingEnabled = false;
+
+  switch (tile.tile) {
+    case 'grass':
+      ctx.fillStyle = ['#4a7c59','#4d805c','#487955'][tile.variant % 3];
+      ctx.fillRect(px, py, TILE, TILE);
+      break;
+    case 'water':
+      ctx.fillStyle = '#4488aa';
+      ctx.fillRect(px, py, TILE, TILE);
+      // wave animation
+      const wave = Math.sin((x + S.time*0.02) * 0.5) * 3;
+      ctx.fillStyle = 'rgba(100,180,220,0.3)';
+      ctx.fillRect(px, py + TILE/2 + wave, TILE, 4);
+      break;
+    case 'bridge':
+      ctx.fillStyle = '#8B7355';
+      ctx.fillRect(px, py, TILE+2, TILE);
+      ctx.fillStyle = '#6B5335';
+      for (let i = 0; i < 4; i++) ctx.fillRect(px + i*10, py, 4, TILE);
+      break;
+    case 'path':
+      ctx.fillStyle = '#9B8B75';
+      ctx.fillRect(px, py, TILE, TILE);
+      break;
+    case 'tree':
+      ctx.fillStyle = '#4a7c59';
+      ctx.fillRect(px, py, TILE, TILE);
+      if (!tile.harvested) {
+        ctx.fillStyle = '#5a4030'; ctx.fillRect(px+14, py+18, 4, 14);
+        ctx.fillStyle = '#3a8c3f'; ctx.beginPath(); ctx.arc(px+16, py+12, 12, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#2d6a2f'; ctx.beginPath(); ctx.arc(px+16, py+10, 9, 0, Math.PI*2); ctx.fill();
+      } else {
+        ctx.fillStyle = '#5a4030'; ctx.fillRect(px+14, py+22, 4, 6);
+      }
+      break;
+    case 'rock':
+      ctx.fillStyle = '#4a7c59'; ctx.fillRect(px, py, TILE, TILE);
+      if (!tile.harvested) {
+        ctx.fillStyle = '#808080'; ctx.beginPath();
+        ctx.moveTo(px+6, py+28); ctx.lineTo(px+10, py+8); ctx.lineTo(px+22, py+6);
+        ctx.lineTo(px+26, py+16); ctx.lineTo(px+20, py+28); ctx.closePath(); ctx.fill();
+        ctx.fillStyle = '#909090'; ctx.beginPath();
+        ctx.moveTo(px+10, py+12); ctx.lineTo(px+16, py+6); ctx.lineTo(px+22, py+14); ctx.fill();
+      }
+      break;
+    case 'berry':
+      ctx.fillStyle = '#4a7c59'; ctx.fillRect(px, py, TILE, TILE);
+      ctx.fillStyle = '#3a6c2f'; ctx.fillRect(px+12, py+14, 8, 18);
+      if (!tile.harvested) {
+        ctx.fillStyle = '#ff4444'; ctx.beginPath(); ctx.arc(px+14, py+14, 5, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#ff6666'; ctx.beginPath(); ctx.arc(px+20, py+16, 4, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#ff4444'; ctx.beginPath(); ctx.arc(px+10, py+18, 4, 0, Math.PI*2); ctx.fill();
+      }
+      break;
+    case 'float_rock':
+      ctx.fillStyle = '#4a7c59'; ctx.fillRect(px, py, TILE, TILE);
+      if (!tile.harvested) {
+        const floatY = Math.sin(S.time * 0.03 + tile.offset) * 6;
+        ctx.fillStyle = '#9b6fb0'; ctx.beginPath();
+        ctx.moveTo(px+8, py+20+floatY); ctx.lineTo(px+4, py+8+floatY); ctx.lineTo(px+16, py+4+floatY);
+        ctx.lineTo(px+26, py+8+floatY); ctx.lineTo(px+24, py+20+floatY); ctx.closePath(); ctx.fill();
+        ctx.fillStyle = '#b89fd0'; ctx.beginPath();
+        ctx.moveTo(px+8, py+10+floatY); ctx.lineTo(px+16, py+6+floatY); ctx.lineTo(px+22, py+12+floatY); ctx.fill();
+        // glow ring
+        ctx.strokeStyle = 'rgba(255,105,180,0.4)'; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.arc(px+15, py+12+floatY, 14, 0, Math.PI*2); ctx.stroke();
+        // shadow on ground
+        ctx.fillStyle = 'rgba(0,0,0,0.15)'; ctx.beginPath();
+        ctx.ellipse(px+15, py+26, 10, 3, 0, 0, Math.PI*2); ctx.fill();
+      }
+      break;
+    case 'walk_tree':
+      ctx.fillStyle = '#4a7c59'; ctx.fillRect(px, py, TILE, TILE);
+      if (!tile.harvested) {
+        const moveX = Math.sin(S.time * 0.015 + tile.phase) * 3;
+        ctx.fillStyle = '#6b3fa0'; ctx.fillRect(px+13+moveX, py+16, 6, 16);
+        ctx.fillStyle = '#8b5fc0'; ctx.beginPath();
+        ctx.arc(px+16+moveX, py+10, 13, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#a070d0'; ctx.beginPath();
+        ctx.arc(px+16+moveX, py+8, 9, 0, Math.PI*2); ctx.fill();
+      }
+      break;
+    case 'glitch':
+      const gx = Math.floor(Math.random() * 4);
+      ctx.fillStyle = ['#ff00ff','#00ffff','#ffff00','#ff0000'][gx];
+      ctx.fillRect(px, py, TILE/2, TILE/2);
+      ctx.fillRect(px+TILE/2, py+TILE/2, TILE/2, TILE/2);
+      ctx.fillStyle = '#000';
+      ctx.fillRect(px+TILE/2, py, TILE/2, TILE/2);
+      ctx.fillRect(px, py+TILE/2, TILE/2, TILE/2);
+      break;
+  }
+}
+
+function drawPlayer(ctx, camX, camY) {
+  const sx = S.player.x * TILE - camX;
+  const sy = S.player.y * TILE - camY;
+  // Shadow
+  ctx.fillStyle = 'rgba(0,0,0,0.3)';
+  ctx.beginPath(); ctx.ellipse(sx+TILE/2, sy+TILE-2, 10, 4, 0, 0, Math.PI*2); ctx.fill();
+  // Body
+  ctx.fillStyle = '#4488cc'; // Tunic
+  ctx.fillRect(sx+8, sy+10, 16, 14);
+  // Head
+  ctx.fillStyle = '#f4c89a';
+  ctx.fillRect(sx+10, sy+4, 12, 10);
+  // Hair
+  ctx.fillStyle = '#5a3820';
+  ctx.fillRect(sx+8, sy+2, 16, 6);
+  // Legs
+  ctx.fillStyle = '#5a4020';
+  ctx.fillRect(sx+10, sy+24, 6, 6);
+  ctx.fillRect(sx+16, sy+24, 6, 6);
+  // Eyes
+  ctx.fillStyle = '#000';
+  const eyeOffX = [0, 2, 0, -2][S.player.facing];
+  ctx.fillRect(sx+12+eyeOffX, sy+8, 2, 2);
+  ctx.fillRect(sx+18+eyeOffX, sy+8, 2, 2);
+  // Arms
+  ctx.fillStyle = '#f4c89a';
+  ctx.fillRect(sx+4, sy+12, 4, 8);
+  ctx.fillRect(sx+24, sy+12, 4, 8);
+}
+
+function drawNPC(ctx, npc, camX, camY) {
+  const sx = npc.x * TILE - camX;
+  const sy = npc.y * TILE - camY;
+  // Shadow
+  ctx.fillStyle = 'rgba(0,0,0,0.3)';
+  ctx.beginPath(); ctx.ellipse(sx+TILE/2, sy+TILE-2, 8, 3, 0, 0, Math.PI*2); ctx.fill();
+  // Body - elf robe
+  ctx.fillStyle = '#44aa44';
+  ctx.fillRect(sx+9, sy+10, 14, 12);
+  // Head
+  ctx.fillStyle = '#f4d89a';
+  ctx.fillRect(sx+10, sy+4, 12, 10);
+  // Hair - silver
+  ctx.fillStyle = '#c0c0d0';
+  ctx.fillRect(sx+8, sy+1, 16, 6);
+  ctx.fillRect(sx+6, sy+3, 4, 6);
+  ctx.fillRect(sx+22, sy+3, 4, 6);
+  // Eyes
+  ctx.fillStyle = '#2a5a2a';
+  ctx.fillRect(sx+12, sy+7, 2, 2);
+  ctx.fillRect(sx+18, sy+7, 2, 2);
+  // Pointed ears
+  ctx.fillStyle = '#f4d89a';
+  ctx.fillRect(sx+4, sy+5, 4, 6);
+  ctx.fillRect(sx+24, sy+5, 4, 6);
+}
+
+function drawBuilding(ctx, b, camX, camY) {
+  const sx = b.x * TILE - camX;
+  const sy = b.y * TILE - camY;
+  ctx.imageSmoothingEnabled = false;
+
+  if (b.type === 'hut') {
+    // Walls
+    ctx.fillStyle = '#c4956a';
+    ctx.fillRect(sx+4, sy+8, 24, 24);
+    ctx.strokeStyle = '#8B6914'; ctx.lineWidth = 1;
+    ctx.strokeRect(sx+4, sy+8, 24, 24);
+    // Roof
+    ctx.fillStyle = '#d4453a';
+    ctx.beginPath();
+    ctx.moveTo(sx, sy+8); ctx.lineTo(sx+16, sy-4); ctx.lineTo(sx+32, sy+8);
+    ctx.closePath(); ctx.fill();
+    // Door
+    ctx.fillStyle = '#5a3020';
+    ctx.fillRect(sx+12, sy+20, 8, 12);
+    // Window
+    ctx.fillStyle = '#aaddff';
+    ctx.fillRect(sx+6, sy+12, 7, 7);
+    ctx.fillRect(sx+19, sy+12, 7, 7);
+  } else if (b.type === 'storage') {
+    // Simple wooden storage box
+    ctx.fillStyle = '#a08060';
+    ctx.fillRect(sx+4, sy+12, 24, 20);
+    ctx.strokeStyle = '#6B5335'; ctx.lineWidth = 2;
+    ctx.strokeRect(sx+4, sy+12, 24, 20);
+    // Lid
+    ctx.fillStyle = '#b89070';
+    ctx.fillRect(sx+2, sy+8, 28, 8);
+    ctx.strokeRect(sx+2, sy+8, 28, 8);
+    // Iron bands
+    ctx.fillStyle = '#666';
+    ctx.fillRect(sx+6, sy+16, 20, 3);
+    ctx.fillRect(sx+6, sy+24, 20, 3);
+  }
+}
+
+function render() {
+  const c = document.getElementById('game');
+  c.width = window.innerWidth;
+  c.height = window.innerHeight;
+  const ctx = c.getContext('2d');
+  ctx.imageSmoothingEnabled = false;
+
+  // Camera follow player
+  const targetCX = S.player.x * TILE - c.width / 2;
+  const targetCY = S.player.y * TILE - c.height / 2;
+  S.camera.x += (targetCX - S.camera.x) * 0.1;
+  S.camera.y += (targetCY - S.camera.y) * 0.1;
+  const camX = S.camera.x, camY = S.camera.y;
+
+  // Draw visible tiles
+  const startX = Math.max(0, Math.floor(camX / TILE) - 1);
+  const startY = Math.max(0, Math.floor(camY / TILE) - 1);
+  const endX = Math.min(WORLD_W, startX + Math.ceil(c.width / TILE) + 2);
+  const endY = Math.min(WORLD_H, startY + Math.ceil(c.height / TILE) + 2);
+
+  for (let y = startY; y < endY; y++) {
+    for (let x = startX; x < endX; x++) {
+      drawTile(ctx, x, y, S.worldData[y][x]);
+    }
+  }
+
+  // Draw buildings
+  S.buildings.forEach(b => drawBuilding(ctx, b, camX, camY));
+
+  // Draw NPCs
+  S.npcs.forEach(n => drawNPC(ctx, n, camX, camY));
+
+  // Draw player
+  drawPlayer(ctx, camX, camY);
+
+  // Draw particles
+  S.particles = S.particles.filter(p => p.life > 0);
+  S.particles.forEach(p => {
+    const alpha = p.life / p.maxLife;
+    ctx.fillStyle = p.color + Math.floor(alpha * 255).toString(16).padStart(2, '0');
+    ctx.fillRect(p.x - camX, p.y - camY, 2, 2);
+    p.x += p.vx; p.y += p.vy; p.life--;
+  });
+
+  // Night overlay
+  const nightAlpha = Math.max(0, Math.min(0.5, (S.time - 900) / 300 * 0.5));
+  if (nightAlpha > 0.01) {
+    ctx.fillStyle = `rgba(10,10,40,${nightAlpha})`;
+    ctx.fillRect(0, 0, c.width, c.height);
+  }
+
+  // Home territory indicator
+  const homeScreenX = 15.5 * TILE - camX;
+  const homeScreenY = 17.5 * TILE - camY;
+  ctx.strokeStyle = 'rgba(255,215,0,0.2)'; ctx.lineWidth = 1; ctx.setLineDash([4,4]);
+  ctx.beginPath(); ctx.arc(homeScreenX, homeScreenY, S.territoryRadius * TILE, 0, Math.PI*2); ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+function updateUI() {
+  document.getElementById('cnt-stone').textContent = S.inventory.stone;
+  document.getElementById('cnt-wood').textContent = S.inventory.wood;
+  document.getElementById('cnt-starshard').textContent = S.inventory.starshard;
+  document.getElementById('cnt-herb').textContent = S.inventory.herb;
+
+  const hours = Math.floor(S.time / 60);
+  const mins = Math.floor(S.time % 60);
+  const timeStr = `${hours}:${mins.toString().padStart(2,'0')}`;
+  const timeEmoji = S.time < 720 ? '☀️' : S.time < 1080 ? '🌅' : '🌙';
+  document.getElementById('info-time').textContent = `${timeEmoji} ${timeStr}`;
+
+  const nearHome = Math.sqrt((S.player.x-15.5)**2 + (S.player.y-17.5)**2) < S.territoryRadius;
+  const locName = nearHome ? '🏠 领地' : S.player.x > 50 ? '⚠️ 边缘地带' : S.player.x > 28 ? '🌲 东部荒野' : '🌿 领地周边';
+  document.getElementById('info-loc').textContent = `📍 ${locName}`;
+
+  // Hotbar selection
+  document.querySelectorAll('.slot').forEach((el, i) => {
+    el.classList.toggle('selected', i === S.hotbarSel);
+  });
+}
+
+// --- Save/Load ---
+function saveGame() {
+  const data = { player: S.player, time: S.time, inventory: S.inventory,
+    buildings: S.buildings, discoveries: S.discoveries, territoryLevel: S.territoryLevel,
+    npcs: S.npcs.map(n => ({ x:n.x, y:n.y, type:n.type, name:n.name, dialogIdx:n.dialogIdx })),
+    worldData: S.worldData };
+  localStorage.setItem('isekai_pioneer_save', JSON.stringify(data));
+}
+
+function loadGame() {
+  const raw = localStorage.getItem('isekai_pioneer_save');
+  if (!raw) return false;
+  try {
+    const data = JSON.parse(raw);
+    S.player.x = data.player.x; S.player.y = data.player.y;
+    S.time = data.time; S.inventory = data.inventory;
+    S.buildings = data.buildings; S.discoveries = data.discoveries || [];
+    S.territoryLevel = data.territoryLevel || 1;
+    S.npcs.forEach((n, i) => { if (data.npcs[i]) n.dialogIdx = data.npcs[i].dialogIdx; });
+    if (data.worldData) S.worldData = data.worldData;
+    showMsg('📂 存档已加载', '#88ff88');
+    updateUI();
+    return true;
+  } catch(e) { return false; }
+}
+
+// --- Game Loop ---
+function gameLoop() {
+  updatePlayer();
+  updateTime();
+
+  // Auto-save every 30 seconds
+  if (Math.floor(S.time / 30) !== Math.floor((S.time - S.daySpeed * 0.016) / 30)) saveGame();
+
+  // Update messages
+  S.messages = S.messages.filter(m => m.timer > 0);
+  S.messages.forEach(m => m.timer--);
+  const msgEl = document.getElementById('msg');
+  if (S.messages.length > 0 && S.messages[S.messages.length-1].timer > 110) {
+    const m = S.messages[S.messages.length-1];
+    msgEl.textContent = m.text; msgEl.style.color = m.color; msgEl.style.opacity = '1';
+    setTimeout(() => { msgEl.style.opacity = '0'; }, 2000);
+  }
+
+  render();
+  updateUI();
+  requestAnimationFrame(gameLoop);
+}
+
+// --- Init ---
+if (!loadGame()) {
+  showMsg('🌍 欢迎来到异世界... 你是谁？你在哪？', '#ffd700');
+}
+updateUI();
+gameLoop();
+
+// Handle resize
+window.addEventListener('resize', render);
+</script>
+</body>
+</html>
