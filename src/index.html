@@ -3,2283 +3,735 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>🌍 异世界开拓者</title>
+<title>🌍 异世界开拓者 · 序章</title>
 <style>
-/* ═══════════════════════════════════════════
-   Isekai Pioneer v3 - Refined Pixel Art UI
-   Earth tones, soft glow, elegant panels
-   ═══════════════════════════════════════════ */
+:root{--bg:#1a1410;--panel:#2a1f18;--gold:#c8a45c;--text:#e8dcc8;--accent:#5a9e6f;--warn:#c44;--mystic:#9b6fb0}
 *{margin:0;padding:0;box-sizing:border-box}
-body{background:#16120e;overflow:hidden;font-family:'Segoe UI','Courier New',monospace;touch-action:none;user-select:none}
-canvas{display:block;image-rendering:pixelated}
-
-/* ── Hotbar ── */
-#ui{position:fixed;bottom:0;left:0;right:0;pointer-events:none;z-index:10}
-#hotbar{display:flex;justify-content:center;gap:5px;padding:10px 8px;background:linear-gradient(180deg,rgba(20,14,10,0.92) 0%,rgba(14,10,6,0.96) 100%);border-top:2px solid #4a3a2a;box-shadow:0 -4px 16px rgba(0,0,0,0.5)}
-.slot{width:50px;height:50px;background:linear-gradient(135deg,#2a2018 0%,#1e1610 100%);border:2px solid #4a3a2a;position:relative;border-radius:6px;cursor:pointer;pointer-events:auto;transition:all 0.15s}
-.slot:hover{border-color:#8a7a5a;box-shadow:0 0 6px rgba(200,160,60,0.2)}
-.slot .item{width:100%;height:100%;display:flex;align-items:center;justify-content:center}
-.slot .item canvas{width:32px;height:32px;image-rendering:pixelated}
-.slot .count{position:absolute;bottom:1px;right:5px;font-size:10px;color:#e8c860;text-shadow:0 1px 2px #000;font-weight:bold;letter-spacing:-0.5px}
-.slot.selected{border-color:#c8a040;box-shadow:0 0 12px rgba(200,160,40,0.4),inset 0 0 8px rgba(200,160,40,0.1)}
-/* Rarity glows */
-.slot.rarity-uncommon{border-color:#6a8a5a}
-.slot.rarity-rare{border-color:#5a5a9a;box-shadow:0 0 8px rgba(80,80,200,0.2)}
-.slot.rarity-epic{border-color:#9a5a9a;box-shadow:0 0 10px rgba(180,80,180,0.25)}
-
-/* ── Messages ── */
-#msg{position:fixed;top:45%;left:50%;transform:translate(-50%,-50%);color:#fff;font-size:17px;text-align:center;text-shadow:0 2px 4px rgba(0,0,0,0.8);opacity:0;transition:opacity 0.3s;pointer-events:none;z-index:20;font-weight:500}
-
-/* ── Info bar ── */
-#info{position:fixed;top:10px;left:12px;color:#c8b898;font-size:11px;text-shadow:0 1px 3px rgba(0,0,0,0.7);pointer-events:none;line-height:1.6;z-index:5;background:rgba(14,10,6,0.7);padding:6px 10px;border-radius:6px;border:1px solid rgba(90,74,58,0.4)}
-#info span{display:block}
-
-/* ── Controls ── */
-#controls{position:fixed;bottom:85px;right:12px;display:flex;flex-direction:column;gap:5px;pointer-events:auto;z-index:5}
-#controls button{width:42px;height:42px;background:rgba(10,8,4,0.7);border:2px solid #4a3a2a;color:#c8a040;font-size:17px;border-radius:8px;cursor:pointer;transition:all 0.15s}
-#controls button:hover{background:rgba(30,20,10,0.8);border-color:#8a7a5a;box-shadow:0 0 6px rgba(200,160,40,0.2)}
-#controls button:active{background:rgba(50,30,15,0.9);transform:scale(0.95)}
-.mobile-ctrl{position:fixed;bottom:85px;left:12px;display:none;pointer-events:auto;z-index:5}
-.mobile-ctrl .row{display:flex;gap:3px;margin-bottom:3px}
-.mobile-ctrl button{width:50px;height:50px;background:rgba(10,8,4,0.55);border:2px solid #4a3a2a;color:#d4c8b8;font-size:20px;border-radius:10px;cursor:pointer;user-select:none}
-.mobile-ctrl .spacer{width:50px;height:50px;visibility:hidden}
-@media(max-width:768px){.mobile-ctrl{display:block}}
-
-/* ═══════ Panel Overlay ═══════ */
-#overlay{position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:50;display:none;justify-content:center;align-items:center;backdrop-filter:blur(2px)}
-#overlay.show{display:flex}
-
-/* Panel frame with decorative border */
-.panel{background:linear-gradient(135deg,rgba(22,16,10,0.97) 0%,rgba(16,10,6,0.98) 100%);
-  border:3px solid #4a3a2a;border-radius:10px;
-  width:90vw;max-width:720px;max-height:82vh;overflow-y:auto;
-  padding:20px 16px;color:#d4c8b8;position:relative;
-  box-shadow:0 8px 32px rgba(0,0,0,0.6),inset 0 1px 0 rgba(255,255,255,0.03)}
-.panel::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;
-  background:linear-gradient(90deg,transparent,#8a7a5a 20%,#c8a040 50%,#8a7a5a 80%,transparent);border-radius:10px 10px 0 0}
-.panel h2{color:#e8c860;text-align:center;margin-bottom:14px;font-size:19px;
-  border-bottom:1px solid rgba(90,74,58,0.5);padding-bottom:10px;letter-spacing:1px}
-.panel .close-btn{position:absolute;top:10px;right:14px;color:#c88880;font-size:20px;
-  cursor:pointer;background:none;border:none;padding:4px 8px;transition:color 0.2s}
-.panel .close-btn:hover{color:#e86050}
-
-/* Tabs */
-.panel-tabs{display:flex;gap:5px;margin-bottom:14px;flex-wrap:wrap}
-.panel-tabs button{flex:1;min-width:72px;padding:7px 6px;
-  background:linear-gradient(180deg,rgba(40,30,20,0.8) 0%,rgba(30,20,14,0.9) 100%);
-  border:1px solid #3a2a1a;color:#8a7a6a;cursor:pointer;font-size:12px;
-  border-radius:5px;font-family:inherit;transition:all 0.2s}
-.panel-tabs button:hover{border-color:#5a4a3a;color:#b8a888}
-.panel-tabs button.active{background:linear-gradient(180deg,rgba(60,44,28,0.9) 0%,rgba(40,28,18,0.95) 100%);
-  color:#e8c860;border-color:#8a7a5a;box-shadow:0 0 8px rgba(200,160,40,0.15)}
-
-/* Cards - universal */
-.recipe-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(145px,1fr));gap:8px}
-.recipe-card{background:linear-gradient(135deg,rgba(30,22,14,0.9) 0%,rgba(22,16,10,0.95) 100%);
-  border:1px solid #3a2a1a;border-radius:6px;padding:10px 8px;text-align:center;
-  transition:all 0.2s}
-.recipe-card:hover{border-color:#5a4a3a;box-shadow:0 2px 8px rgba(0,0,0,0.3)}
-.recipe-card .name{color:#e8c860;font-size:13px;margin-bottom:4px;font-weight:500}
-.recipe-card .req{color:#8a7a6a;font-size:10px;line-height:1.4}
-.recipe-card .arrow{color:#c8a040;margin:4px 0}
-.recipe-card button{background:linear-gradient(180deg,rgba(60,44,28,0.8) 0%,rgba(40,28,16,0.9) 100%);
-  color:#e8c860;border:1px solid #5a4a3a;padding:5px 14px;cursor:pointer;
-  font-size:11px;border-radius:4px;margin-top:5px;font-family:inherit;transition:all 0.15s}
-.recipe-card button:hover{background:rgba(80,60,34,0.85);border-color:#8a7a5a}
-.recipe-card button:disabled{background:rgba(20,14,8,0.6);color:#555;border-color:#2a1a0a;cursor:default}
-
-/* Bestiary - with illustration support */
-.bestiary-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px}
-.bestiary-card{background:linear-gradient(180deg,rgba(26,20,14,0.9) 0%,rgba(18,12,8,0.95) 100%);
-  border:1px solid #3a2a1a;border-radius:6px;padding:12px;text-align:center;
-  transition:all 0.25s}
-.bestiary-card:hover{border-color:#5a4a3a}
-.bestiary-card .illu{width:68px;height:68px;margin:0 auto 6px;display:flex;align-items:center;justify-content:center;
-  background:rgba(0,0,0,0.3);border-radius:4px;border:1px solid #2a1a0a}
-.bestiary-card .illu canvas{width:64px;height:64px;image-rendering:pixelated}
-.bestiary-card .ename{color:#e8c860;font-size:13px;margin-bottom:3px;font-weight:500}
-.bestiary-card .flavor{color:#7a6a5a;font-size:10px;line-height:1.5;font-style:italic;margin-top:4px}
-.bestiary-card.locked{opacity:0.45}
-.bestiary-card.locked .illu{position:relative}
-.bestiary-card.locked .illu::after{content:'?';position:absolute;inset:0;display:flex;align-items:center;
-  justify-content:center;font-size:28px;color:#4a3a2a}
-.bestiary-card.locked .ename{color:#555}
-.bestiary-card .rarity-tag{display:inline-block;font-size:9px;padding:1px 6px;border-radius:3px;margin-top:3px}
-
-/* Building */
-.build-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
-.build-card{background:linear-gradient(135deg,rgba(30,22,14,0.9) 0%,rgba(22,16,10,0.95) 100%);
-  border:1px solid #3a2a1a;border-radius:6px;padding:10px 8px;text-align:center;
-  transition:all 0.2s}
-.build-card:hover{border-color:#5a4a3a}
-.build-card .name{color:#e8c860;font-size:13px;margin-bottom:4px;font-weight:500}
-.build-card .desc{color:#8a7a6a;font-size:10px;line-height:1.4}
-.build-card .cost{color:#88aa88;font-size:10px}
-.build-card .thumb{width:48px;height:48px;margin:0 auto 4px;display:flex;align-items:center;justify-content:center;
-  background:rgba(0,0,0,0.25);border-radius:4px}
-.build-card .thumb canvas{width:40px;height:40px;image-rendering:pixelated}
-.build-card button{background:linear-gradient(180deg,rgba(60,44,28,0.8) 0%,rgba(40,28,16,0.9) 100%);
-  color:#e8c860;border:1px solid #5a4a3a;padding:5px 14px;cursor:pointer;
-  font-size:11px;border-radius:4px;margin-top:5px;font-family:inherit;transition:all 0.15s}
-.build-card button:hover{background:rgba(80,60,34,0.85);border-color:#8a7a5a}
-.build-card button:disabled{background:rgba(20,14,8,0.6);color:#555;border-color:#2a1a0a;cursor:default}
-
-/* Garden */
-.garden-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(145px,1fr));gap:8px}
-.garden-card{background:linear-gradient(135deg,rgba(30,22,14,0.9) 0%,rgba(22,16,10,0.95) 100%);
-  border:1px solid #3a2a1a;border-radius:6px;padding:10px 8px;text-align:center;
-  transition:all 0.2s}
-.garden-card .name{color:#e8c860;font-size:13px}
-.garden-card .desc{color:#8a7a6a;font-size:10px;line-height:1.4}
-.garden-card .growth{color:#88aa88;font-size:10px}
-.garden-card button{background:linear-gradient(180deg,rgba(60,44,28,0.8) 0%,rgba(40,28,16,0.9) 100%);
-  color:#e8c860;border:1px solid #5a4a3a;padding:5px 14px;cursor:pointer;
-  font-size:11px;border-radius:4px;margin-top:5px;font-family:inherit;transition:all 0.15s}
-.garden-card button:hover{background:rgba(80,60,34,0.85);border-color:#8a7a5a}
-
-/* Void trade */
-.trade-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(105px,1fr));gap:6px}
-.trade-card{background:linear-gradient(135deg,rgba(20,8,20,0.9) 0%,rgba(14,4,14,0.95) 100%);
-  border:1px solid #3a1a3a;border-radius:6px;padding:8px 6px;text-align:center;
-  transition:all 0.2s}
-.trade-card:hover{border-color:#5a2a5a}
-.trade-card .name{color:#c8a0d8;font-size:11px}
-.trade-card .cost{color:#d87093;font-size:9px}
-.trade-card button{background:linear-gradient(180deg,rgba(50,20,50,0.8) 0%,rgba(30,10,30,0.9) 100%);
-  color:#d8b0e8;border:1px solid #5a2a5a;padding:3px 10px;cursor:pointer;
-  font-size:10px;border-radius:3px;margin-top:4px;font-family:inherit;transition:all 0.15s}
-.trade-card button:hover{background:rgba(60,30,60,0.85)}
-.trade-card button:disabled{background:rgba(10,5,10,0.5);color:#444}
-
-/* Memory overlay - aged paper effect */
-#memory-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:60;display:none;
-  justify-content:center;align-items:center;flex-direction:column}
-#memory-overlay.show{display:flex}
-.memory-frame{position:relative;max-width:520px;padding:28px 24px;
-  background:linear-gradient(135deg,rgba(40,30,20,0.85),rgba(25,18,10,0.9));
-  border:2px solid #5a4a3a;border-radius:8px;
-  box-shadow:0 0 40px rgba(139,200,240,0.08),inset 0 0 30px rgba(0,0,0,0.3)}
-.memory-frame::before{content:'';position:absolute;inset:6px;border:1px solid rgba(90,74,58,0.3);border-radius:4px;pointer-events:none}
-.memory-text{color:#c8d8e8;font-size:15px;text-align:center;text-shadow:0 0 8px rgba(139,200,240,0.2);
-  line-height:2;font-style:italic;letter-spacing:0.5px}
-.memory-hint{color:#6a5a4a;font-size:11px;margin-top:18px;text-align:center}
-
-/* Scrollbar */
-.panel::-webkit-scrollbar{width:6px}
-.panel::-webkit-scrollbar-track{background:rgba(0,0,0,0.2);border-radius:3px}
-.panel::-webkit-scrollbar-thumb{background:#4a3a2a;border-radius:3px}
-.panel::-webkit-scrollbar-thumb:hover{background:#6a5a3a}
+body{background:var(--bg);color:var(--text);font-family:'Noto Sans SC','PingFang SC','Microsoft YaHei',sans-serif;overflow:hidden;height:100dvh;touch-action:manipulation;user-select:none;-webkit-user-select:none}
+#app{display:flex;flex-direction:column;height:100dvh;max-width:900px;margin:0 auto}
+#topbar{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--panel);border-bottom:1px solid #3a2a1a;font-size:13px;gap:8px;flex-shrink:0}
+#topbar .chapter{color:var(--gold);font-weight:bold;white-space:nowrap}
+#topbar .time{color:#aaa}
+#topbar .resources{display:flex;gap:10px;font-size:12px}
+#topbar .resources span{display:flex;align-items:center;gap:2px}
+#gameview{flex:1;position:relative;overflow:hidden;min-height:0}
+#gameview canvas{display:block;width:100%;height:100%}
+#bottombar{display:flex;justify-content:space-around;padding:6px 0;background:var(--panel);border-top:1px solid #3a2a1a;flex-shrink:0}
+#bottombar button{flex:1;padding:10px 4px;background:none;border:none;color:#999;font-size:13px;cursor:pointer;transition:.2s;display:flex;flex-direction:column;align-items:center;gap:2px}
+#bottombar button .icon{font-size:20px}
+#bottombar button.active{color:var(--gold);background:rgba(200,164,92,.1)}
+#bottombar button:hover{color:#ccc}
+#dialog_overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.7);display:none;z-index:100;justify-content:center;align-items:center;flex-direction:column;padding:20px}
+#dialog_overlay.show{display:flex}
+#dialog_box{background:var(--panel);border:2px solid var(--gold);border-radius:8px;padding:20px;max-width:480px;width:90%;max-height:80vh;overflow-y:auto}
+#dialog_box .portrait{width:64px;height:64px;margin:-40px auto 12px;border-radius:50%;border:2px solid var(--gold);display:flex;align-items:center;justify-content:center;font-size:36px;background:#2a1f18}
+#dialog_box .speaker{color:var(--gold);font-weight:bold;text-align:center;margin-bottom:4px}
+#dialog_box .text{line-height:1.7;margin-bottom:16px;font-size:15px}
+#dialog_box .choices{display:flex;flex-direction:column;gap:8px}
+#dialog_box .choices button{width:100%;padding:12px;background:rgba(200,164,92,.1);border:1px solid var(--gold);color:var(--gold);border-radius:6px;font-size:14px;cursor:pointer;text-align:left;transition:.2s}
+#dialog_box .choices button:hover{background:rgba(200,164,92,.25)}
+#dialog_box .continue{text-align:center}
+#dialog_box .continue button{padding:10px 30px;background:var(--gold);border:none;color:#1a1410;border-radius:6px;font-size:14px;cursor:pointer;font-weight:bold}
+#announce{position:fixed;top:20%;left:50%;transform:translate(-50%,-50%);color:#fff;font-size:18px;text-align:center;text-shadow:2px 2px 0 #000;pointer-events:none;z-index:50;transition:opacity .5s;opacity:0;white-space:nowrap}
+#announce.show{opacity:1}
+@media(max-width:600px){#topbar{font-size:10px;padding:6px 8px}#topbar .resources{font-size:10px;gap:6px}#bottombar button{font-size:11px}#bottombar button .icon{font-size:16px}#dialog_box{padding:14px;max-width:95%}#dialog_box .text{font-size:13px}}
 </style>
 </head>
 <body>
-<canvas id="game"></canvas>
-
-<!-- Info overlay -->
-<div id="info">
-  <span id="info-time">☀️ 早上 6:00</span>
-  <span id="info-loc">📍 领地</span>
-  <span id="info-level">🏠 领地 Lv.1</span>
-</div>
-<div id="msg"></div>
-
-<!-- Hotbar (icons drawn via canvas) -->
-<div id="ui">
-  <div id="hotbar">
-    <div class="slot selected" data-slot="0"><div class="item"><canvas width="32" height="32" id="icon-axe"></canvas></div></div>
-    <div class="slot rarity-common" data-slot="1"><div class="item"><canvas width="32" height="32" id="icon-stone"></canvas></div><div class="count" id="cnt-stone">0</div></div>
-    <div class="slot rarity-common" data-slot="2"><div class="item"><canvas width="32" height="32" id="icon-wood"></canvas></div><div class="count" id="cnt-wood">0</div></div>
-    <div class="slot rarity-rare" data-slot="3"><div class="item"><canvas width="32" height="32" id="icon-starshard"></canvas></div><div class="count" id="cnt-starshard">0</div></div>
-    <div class="slot rarity-common" data-slot="4"><div class="item"><canvas width="32" height="32" id="icon-herb"></canvas></div><div class="count" id="cnt-herb">0</div></div>
-    <div class="slot rarity-uncommon" data-slot="5"><div class="item"><canvas width="32" height="32" id="icon-plank"></canvas></div><div class="count" id="cnt-plank">0</div></div>
-    <div class="slot rarity-uncommon" data-slot="6"><div class="item"><canvas width="32" height="32" id="icon-ironIngot"></canvas></div><div class="count" id="cnt-ironIngot">0</div></div>
-    <div class="slot rarity-epic" data-slot="7"><div class="item"><canvas width="32" height="32" id="icon-crystalShard"></canvas></div><div class="count" id="cnt-crystalShard">0</div></div>
+<div id="app">
+  <div id="topbar">
+    <span class="chapter">📖 <span id="chapter_name">序幕 · 苏醒</span></span>
+    <span class="time"><span id="time_icon">☀️</span> <span id="time_text">第1天 06:00</span></span>
+    <span class="resources">
+      <span>🪵<span id="r_wood">0</span></span>
+      <span>🪨<span id="r_stone">0</span></span>
+      <span>✨<span id="r_star">0</span></span>
+      <span>🌿<span id="r_herb">0</span></span>
+    </span>
+  </div>
+  <div id="gameview"><canvas id="gc"></canvas></div>
+  <div id="bottombar">
+    <button id="btn_home" class="active" onclick="GM.switchMode('home')"><span class="icon">🏠</span>家园</button>
+    <button id="btn_expedition" onclick="GM.switchMode('expedition')"><span class="icon">🗺️</span>远征</button>
+    <button id="btn_bestiary" onclick="GM.openBestiary()"><span class="icon">📖</span>图鉴</button>
+    <button id="btn_journal" onclick="GM.openJournal()"><span class="icon">📜</span>日志</button>
   </div>
 </div>
-
-<!-- Mobile controls -->
-<div class="mobile-ctrl" id="mobile_ctrl">
-  <div class="row"><button class="spacer"></button><button onclick="Game.input('up')">▲</button><button class="spacer"></button></div>
-  <div class="row"><button onclick="Game.input('left')">◀</button><button onclick="Game.input('act')">⚡</button><button onclick="Game.input('right')">▶</button></div>
-  <div class="row"><button class="spacer"></button><button onclick="Game.input('down')">▼</button><button onclick="Game.input('tab')">📋</button></div>
-</div>
-<div id="controls">
-  <button onclick="Game.input('act')" title="采集/对话">⚡</button>
-  <button onclick="Game.input('tab')" title="菜单">📋</button>
-  <button onclick="Game.input('build')" title="建造">🏗️</button>
-</div>
-
-<!-- Overlay panel -->
-<div id="overlay">
-  <div class="panel" id="panel">
-    <button class="close-btn" onclick="togglePanel(null)">✕</button>
-    <div class="panel-tabs" id="panel-tabs"></div>
-    <div id="panel-content"></div>
-  </div>
-</div>
-
-<!-- Memory fragment overlay -->
-<div id="memory-overlay" onclick="closeMemory()">
-  <div class="memory-frame">
-    <div class="memory-text" id="memory-text"></div>
-  </div>
-  <div class="memory-hint">(点击任意位置关闭)</div>
-</div>
-
+<div id="dialog_overlay"><div id="dialog_box"></div></div>
+<div id="announce"></div>
 <script>
-// ╔══════════════════════════════════════════════════════════════╗
-// ║           异世界开拓者 (Isekai Pioneer) v2.0                ║
-// ║   二期: 制作系统 + 图鉴 + 新生物 + 建筑升级 + 菜园           ║
-// ╚══════════════════════════════════════════════════════════════╝
+// ==================== 异世界开拓者 · 引擎 v4 ====================
+const TILE = 40;
+let W, H; // canvas dimensions
 
-const TILE = 32;
-const WORLD_W = 60, WORLD_H = 40;
-
-// ═══════════════════════════════════════════════════════════════
-//  VISUAL UPGRADE v3: Palette, Icon System, Enhanced Renderers
-//  Refined pixel art - earth tones, soft glow, layered detail
-//  Inspired by GBA Golden Sun / Stardew Valley pixel art level
-// ═══════════════════════════════════════════════════════════════
-
-// ── Enhanced Color Palette ──
 const PAL = {
-  grass1: '#4a7c59', grass2: '#4d805c', grass3: '#487955',
-  grassDetail: '#3d6b48', grassBlade: '#5a9068',
-  water1: '#3a6d8c', water2: '#4488aa', waterDeep: '#2d5a75',
-  waterShimmer: 'rgba(130,200,230,0.25)', waterFoam: 'rgba(180,220,240,0.3)',
-  path1: '#9b8b75', path2: '#8a7a65', pathEdge: '#7a6a55',
-  dirt1: '#6b5540', dirt2: '#5a4430',
-  bridge1: '#8B7355', bridge2: '#6B5335', bridgeRail: '#9B8365',
-  rockBase: '#7a7a7a', rockHighlight: '#9a9a9a', rockShadow: '#5a5a5a',
-  ironRock: '#9a7a6a', ironHighlight: '#b09080', ironOreRed: '#c0553a',
-  starRock: '#9b6fb0', starHighlight: '#c8a8d8', starGlow: 'rgba(255,105,180,0.3)',
-  woodTrunk: '#5a4030', woodBark: '#4a3020', woodBarkLight: '#6b5040',
-  leafDark: '#2d6a2f', leafMid: '#3a8c3f', leafLight: '#4da64d', leafHighlight: '#6abf6a',
-  walkTreeTrunk: '#6b3fa0', walkTreeLeaf: '#8b5fc0', walkTreeHighlight: '#a070d0',
-  skin: '#e8c89a', skinShadow: '#c8a878', skinHighlight: '#f0d8b0',
-  hairBrown: '#5a3820', hairBrownLight: '#7a5030',
-  clothBlue: '#4488cc', clothBlueDark: '#3366aa', clothBlueLight: '#66aadd',
-  clothGreen: '#44aa44', clothGreenDark: '#338833',
-  clothPurple: '#8866aa', clothPurpleDark: '#664488',
-  stoneGray: '#8a8a8a', stoneHighlight: '#aeaeae', stoneShadow: '#666666',
-  woodTan: '#b8956a', woodTanDark: '#8a6b4a', woodTanLight: '#d4b896',
-  ironGray: '#7a8a9a', ironHighlight: '#aabbcc', ironDark: '#4a5a6a',
-  crystalPink: '#c880a0', crystalHighlight: '#e8b0d0', crystalDark: '#885070',
-  goldYellow: '#c8a040', goldBright: '#e8c860', goldDark: '#886020',
-  berryRed: '#d44050', berryRedLight: '#e86070', berryRedDark: '#a02030',
-  moonDewBlue: '#64b5f6', moonDewGlow: 'rgba(100,180,250,0.25)',
-  bubbleWheatGold: '#ffd54f', bubbleGrain: '#fff9c4',
-  fireFungusRed: '#e85d3a', fireFungusOrange: '#ff7043', fireFungusLight: '#ffab91',
-  soilDark: '#5a4020', soilLight: '#4a3020', soilWet: '#3a2810',
-  sproutGreen: '#8bc34a', growGreen: '#689f38', matureGreen: '#33691e',
-  butterflyBlue: '#88ccff', butterflyLight: '#cceeff',
-  snailBody: '#c8a882', snailHighlight: '#d8b892', snailEye: '#3a2a1a',
-  jellyBlue: '#8be9fd', jellyDeep: '#4488bb', jellyTentacle: 'rgba(139,233,253,0.4)',
-  voidPurple: '#442244', voidDark: '#1a0a1a', voidEye: '#c896ff',
-  panelBg: 'rgba(18,12,8,0.96)', panelBorder: '#5a4a3a', panelAccent: '#c8a040',
-  cardBg: '#1e1812', cardBorder: '#3a3028',
-  textPrimary: '#d4c8b8', textGold: '#e8c860', textDim: '#8a7a6a',
-  textGreen: '#88cc88', textRed: '#e88888', textPurple: '#c8a0d8', textBlue: '#88c8e8',
-  glitch1: '#cc3388', glitch2: '#33cccc', glitch3: '#cccc33', glitch4: '#cc3333',
+  bg:'#1a1410', panel:'#2a1f18', gold:'#c8a45c', text:'#e8dcc8',
+  grass:['#3d5a3c','#45633e','#3a5535'], grass2:'#4a6e42',
+  dirt:'#6b5340', path:'#8a7355', wood:'#8b6914', wood2:'#a07830',
+  stone:'#707070', stone2:'#888', water:'#3a7090', water2:'#5a90b0',
+  roof:'#b33a30', wall:'#c4956a', leaf:'#2d6a2f', leaf2:'#3a8c3f',
+  skin:'#f0c8a0', skin2:'#e0b080', hair:'#4a2810',
+  silver:'#c0c0d0', elfGreen:'#3a8c40',
+  floatPurple:'#9b6fb0', floatLight:'#c8a0d8',
+  walkPurple:'#6b3fa0', walkLight:'#a070d0',
+  night:'rgba(10,8,30,', star:'#ffd700', pink:'#ff69b4',
+  mystic:'#9b6fb0', danger:'#cc4444',
 };
 
-// ── OffscreenCanvas Caches ──
-const ICON = 32, BEST = 64;
-const iconCache = {}, bestiaryCache = {}, buildThumbCache = {};
-
-function makeCanvas(w, h) {
-  const c = document.createElement('canvas'); c.width = w; c.height = h;
-  return [c, c.getContext('2d')];
-}
-
-// ── Utility drawing helpers ──
-function drawRoundRect(ctx, x, y, w, h, r) {
-  ctx.beginPath();
-  ctx.moveTo(x+r,y); ctx.lineTo(x+w-r,y);
-  ctx.quadraticCurveTo(x+w,y,x+w,y+r);
-  ctx.lineTo(x+w,y+h-r); ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
-  ctx.lineTo(x+r,y+h); ctx.quadraticCurveTo(x,y+h,x,y+h-r);
-  ctx.lineTo(x,y+r); ctx.quadraticCurveTo(x,y,x+r,y);
-  ctx.closePath();
-}
-
-// Add highlight+shadow to a rectangular area
-function addLighting(ctx, x, y, w, h) {
-  ctx.fillStyle = 'rgba(255,255,255,0.12)'; ctx.fillRect(x+1, y+1, w-2, h*0.35);
-  ctx.fillStyle = 'rgba(0,0,0,0.18)'; ctx.fillRect(x+1, y+h*0.5, w-2, h*0.5-1);
-}
-function addTopHighlight(ctx, x, y, w) {
-  ctx.fillStyle = 'rgba(255,255,255,0.2)'; ctx.fillRect(x+2, y+1, w-4, 2);
-}
-
-// ═══════════════════════════════
-//  ITEM ICONS (32x32) - Pre-rendered
-// ═══════════════════════════════
-
-function drawIcon_axe() {
-  const [c, ctx] = makeCanvas(ICON, ICON);
-  // Handle
-  ctx.fillStyle = '#a08060'; ctx.fillRect(6, 18, 4, 12);
-  ctx.fillStyle = '#8B6914'; ctx.fillRect(6, 16, 4, 4);
-  // Blade
-  ctx.fillStyle = '#7a8a9a'; ctx.beginPath();
-  ctx.moveTo(5, 5); ctx.lineTo(20, 3); ctx.lineTo(22, 6);
-  ctx.lineTo(18, 18); ctx.lineTo(8, 12); ctx.closePath(); ctx.fill();
-  // Blade highlight
-  ctx.fillStyle = '#aabbcc'; ctx.beginPath();
-  ctx.moveTo(6, 6); ctx.lineTo(18, 4); ctx.lineTo(19, 5); ctx.lineTo(8, 10); ctx.fill();
-  // Shadow
-  ctx.fillStyle = '#4a5a6a'; ctx.fillRect(8, 14, 8, 2);
-  return c;
-}
-
-function drawIcon_stone() {
-  const [c, ctx] = makeCanvas(ICON, ICON);
-  // Shadow
-  ctx.fillStyle = 'rgba(0,0,0,0.2)'; ctx.beginPath();
-  ctx.ellipse(16, 26, 10, 3, 0, 0, Math.PI*2); ctx.fill();
-  // Main rock body
-  ctx.fillStyle = '#8a8a8a'; ctx.beginPath();
-  ctx.moveTo(6, 26); ctx.lineTo(3, 14); ctx.lineTo(10, 4);
-  ctx.lineTo(20, 3); ctx.lineTo(27, 12); ctx.lineTo(26, 24);
-  ctx.lineTo(18, 28); ctx.closePath(); ctx.fill();
-  // Highlight face
-  ctx.fillStyle = '#a8a8a8'; ctx.beginPath();
-  ctx.moveTo(7, 14); ctx.lineTo(11, 5); ctx.lineTo(19, 4); ctx.lineTo(22, 12); ctx.closePath(); ctx.fill();
-  // Dark side
-  ctx.fillStyle = '#6a6a6a'; ctx.beginPath();
-  ctx.moveTo(22, 12); ctx.lineTo(27, 12); ctx.lineTo(26, 24); ctx.lineTo(20, 26); ctx.closePath(); ctx.fill();
-  // Edge cracks
-  ctx.strokeStyle = '#555'; ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.moveTo(14, 6); ctx.lineTo(17, 14); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(24, 14); ctx.lineTo(23, 20); ctx.stroke();
-  // Specular highlight
-  ctx.fillStyle = 'rgba(255,255,255,0.3)';
-  ctx.beginPath(); ctx.arc(14, 10, 3, 0, Math.PI*2); ctx.fill();
-  return c;
-}
-
-function drawIcon_wood() {
-  const [c, ctx] = makeCanvas(ICON, ICON);
-  // Log
-  ctx.fillStyle = '#8a6b4a'; ctx.fillRect(3, 10, 26, 14);
-  ctx.fillStyle = '#b8956a'; ctx.fillRect(3, 10, 26, 4);
-  ctx.fillStyle = '#6b5030'; ctx.fillRect(3, 22, 26, 2);
-  // Rings
-  ctx.strokeStyle = '#7a5a3a'; ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.arc(8, 15, 3, 0, Math.PI*2); ctx.stroke();
-  ctx.beginPath(); ctx.arc(8, 15, 1.5, 0, Math.PI*2); ctx.stroke();
-  ctx.beginPath(); ctx.arc(24, 15, 3, 0, Math.PI*2); ctx.stroke();
-  ctx.beginPath(); ctx.arc(24, 15, 1.5, 0, Math.PI*2); ctx.stroke();
-  // Bark texture
-  ctx.fillStyle = '#5a3a20';
-  ctx.fillRect(3, 10, 26, 1); ctx.fillRect(3, 23, 26, 1);
-  // Highlight
-  ctx.fillStyle = 'rgba(255,255,255,0.1)'; ctx.fillRect(4, 11, 24, 2);
-  return c;
-}
-
-function drawIcon_starshard() {
-  const [c, ctx] = makeCanvas(ICON, ICON);
-  // Glow aura
-  ctx.fillStyle = 'rgba(200,120,220,0.15)'; ctx.beginPath();
-  ctx.arc(16, 15, 14, 0, Math.PI*2); ctx.fill();
-  // Crystal
-  ctx.fillStyle = '#9b6fb0'; ctx.beginPath();
-  ctx.moveTo(16, 2); ctx.lineTo(24, 12); ctx.lineTo(28, 22);
-  ctx.lineTo(16, 28); ctx.lineTo(4, 22); ctx.lineTo(8, 12);
-  ctx.closePath(); ctx.fill();
-  // Facets
-  ctx.fillStyle = '#b89fd0'; ctx.beginPath();
-  ctx.moveTo(16, 2); ctx.lineTo(24, 12); ctx.lineTo(16, 15); ctx.closePath(); ctx.fill();
-  ctx.fillStyle = '#c8a8d8'; ctx.beginPath();
-  ctx.moveTo(16, 2); ctx.lineTo(8, 12); ctx.lineTo(16, 15); ctx.closePath(); ctx.fill();
-  // Inner glow
-  ctx.fillStyle = 'rgba(255,180,230,0.4)'; ctx.beginPath();
-  ctx.arc(16, 14, 5, 0, Math.PI*2); ctx.fill();
-  // Sparkles
-  ctx.fillStyle = '#ffffff'; ctx.fillRect(18, 6, 1, 1); ctx.fillRect(12, 8, 1, 1);
-  return c;
-}
-
-function drawIcon_herb() {
-  const [c, ctx] = makeCanvas(ICON, ICON);
-  // Stems
-  ctx.fillStyle = '#558b2f'; ctx.fillRect(8, 14, 2, 16); ctx.fillRect(22, 10, 2, 20);
-  ctx.fillStyle = '#689f38'; ctx.fillRect(14, 12, 2, 18);
-  // Leaves - left
-  ctx.fillStyle = '#7cb342'; ctx.beginPath();
-  ctx.ellipse(4, 12, 6, 3, -0.3, 0, Math.PI*2); ctx.fill();
-  ctx.fillStyle = '#8bc34a'; ctx.beginPath();
-  ctx.ellipse(3, 11, 4, 2, -0.3, 0, Math.PI*2); ctx.fill();
-  // Leaves - center
-  ctx.fillStyle = '#7cb342'; ctx.beginPath();
-  ctx.ellipse(16, 8, 7, 3, 0.1, 0, Math.PI*2); ctx.fill();
-  ctx.fillStyle = '#8bc34a'; ctx.beginPath();
-  ctx.ellipse(16, 7, 5, 2, 0.1, 0, Math.PI*2); ctx.fill();
-  // Leaves - right
-  ctx.fillStyle = '#7cb342'; ctx.beginPath();
-  ctx.ellipse(26, 10, 5, 3, 0.3, 0, Math.PI*2); ctx.fill();
-  ctx.fillStyle = '#8bc34a'; ctx.beginPath();
-  ctx.ellipse(26, 9, 3, 2, 0.3, 0, Math.PI*2); ctx.fill();
-  // Berry cluster
-  ctx.fillStyle = '#e84050'; ctx.beginPath(); ctx.arc(16, 26, 3, 0, Math.PI*2); ctx.fill();
-  ctx.fillStyle = '#d44050'; ctx.beginPath(); ctx.arc(12, 28, 2.5, 0, Math.PI*2); ctx.fill();
-  ctx.fillStyle = '#e86070'; ctx.beginPath(); ctx.arc(20, 27, 2, 0, Math.PI*2); ctx.fill();
-  return c;
-}
-
-function drawIcon_plank() {
-  const [c, ctx] = makeCanvas(ICON, ICON);
-  // Planks with grain
-  ctx.fillStyle = '#b8956a'; ctx.fillRect(2, 2, 28, 8);
-  ctx.fillStyle = '#d4b896'; ctx.fillRect(2, 2, 28, 2);
-  ctx.fillStyle = '#a08050'; ctx.fillRect(2, 12, 28, 8);
-  ctx.fillStyle = '#c4a876'; ctx.fillRect(2, 12, 28, 2);
-  ctx.fillStyle = '#b8956a'; ctx.fillRect(2, 22, 28, 8);
-  ctx.fillStyle = '#d4b896'; ctx.fillRect(2, 22, 28, 2);
-  // Grain lines
-  ctx.strokeStyle = '#8a6b4a'; ctx.lineWidth = 0.5;
-  ctx.beginPath(); ctx.moveTo(4, 6); ctx.lineTo(28, 6); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(6, 16); ctx.lineTo(26, 16); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(3, 26); ctx.lineTo(27, 26); ctx.stroke();
-  // Nail heads
-  ctx.fillStyle = '#888'; ctx.fillRect(6, 3, 3, 3); ctx.fillRect(23, 13, 3, 3); ctx.fillRect(8, 23, 3, 3);
-  return c;
-}
-
-function drawIcon_ironIngot() {
-  const [c, ctx] = makeCanvas(ICON, ICON);
-  // Ingot shadow
-  ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.fillRect(6, 26, 20, 4);
-  // Ingot body
-  ctx.fillStyle = '#7a8a9a'; ctx.fillRect(6, 4, 20, 22);
-  // Bevel left
-  ctx.fillStyle = '#aabbcc';
-  ctx.beginPath(); ctx.moveTo(6, 4); ctx.lineTo(12, 8); ctx.lineTo(12, 22); ctx.lineTo(6, 26); ctx.closePath(); ctx.fill();
-  // Bevel right
-  ctx.fillStyle = '#4a5a6a';
-  ctx.beginPath(); ctx.moveTo(26, 4); ctx.lineTo(20, 8); ctx.lineTo(20, 22); ctx.lineTo(26, 26); ctx.closePath(); ctx.fill();
-  // Top highlight
-  ctx.fillStyle = 'rgba(255,255,255,0.3)'; ctx.fillRect(9, 6, 18, 2);
-  // Bottom shadow
-  ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.fillRect(9, 24, 18, 2);
-  // Specular
-  ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.fillRect(13, 8, 3, 14);
-  ctx.fillStyle = 'rgba(255,255,255,0.2)'; ctx.fillRect(17, 8, 2, 10);
-  return c;
-}
-
-function drawIcon_crystalShard() {
-  const [c, ctx] = makeCanvas(ICON, ICON);
-  // Glow
-  ctx.fillStyle = 'rgba(220,140,200,0.2)'; ctx.beginPath();
-  ctx.arc(16, 15, 14, 0, Math.PI*2); ctx.fill();
-  // Main crystal
-  ctx.fillStyle = '#c880a0'; ctx.beginPath();
-  ctx.moveTo(16, 1); ctx.lineTo(26, 10); ctx.lineTo(30, 20);
-  ctx.lineTo(22, 29); ctx.lineTo(12, 30); ctx.lineTo(4, 20);
-  ctx.lineTo(6, 10); ctx.closePath(); ctx.fill();
-  // Facets
-  ctx.fillStyle = '#e0a8c8'; ctx.beginPath();
-  ctx.moveTo(16, 1); ctx.lineTo(26, 10); ctx.lineTo(16, 16); ctx.closePath(); ctx.fill();
-  ctx.fillStyle = '#e8b8d8'; ctx.beginPath();
-  ctx.moveTo(16, 1); ctx.lineTo(6, 10); ctx.lineTo(16, 16); ctx.closePath(); ctx.fill();
-  // Bottom facet
-  ctx.fillStyle = '#a06080'; ctx.beginPath();
-  ctx.moveTo(16, 16); ctx.lineTo(26, 10); ctx.lineTo(30, 20); ctx.lineTo(22, 29); ctx.closePath(); ctx.fill();
-  // Inner shimmer
-  ctx.fillStyle = 'rgba(255,220,240,0.4)'; ctx.beginPath();
-  ctx.arc(16, 14, 4, 0, Math.PI*2); ctx.fill();
-  // Sparkle
-  ctx.fillStyle = '#ffffff'; ctx.fillRect(16, 4, 2, 2);
-  return c;
-}
-
-function drawIcon_stick() {
-  const [c, ctx] = makeCanvas(ICON, ICON);
-  ctx.fillStyle = '#a08060'; ctx.fillRect(4, 8, 4, 20);
-  ctx.fillStyle = '#b8956a'; ctx.fillRect(4, 8, 2, 20);
-  ctx.fillStyle = '#a08060'; ctx.fillRect(20, 6, 4, 22);
-  ctx.fillStyle = '#b8956a'; ctx.fillRect(20, 6, 2, 22);
-  // Cross tie
-  ctx.fillStyle = '#8a6040'; ctx.fillRect(12, 12, 8, 4);
-  ctx.fillStyle = '#a08060'; ctx.fillRect(12, 12, 8, 1);
-  return c;
-}
-
-function drawIcon_ironOre() {
-  const [c, ctx] = makeCanvas(ICON, ICON);
-  ctx.fillStyle = '#6a6a6a'; ctx.beginPath();
-  ctx.moveTo(6, 26); ctx.lineTo(4, 14); ctx.lineTo(10, 4);
-  ctx.lineTo(20, 3); ctx.lineTo(26, 12); ctx.lineTo(24, 24); ctx.closePath(); ctx.fill();
-  ctx.fillStyle = '#8a8a8a'; ctx.beginPath();
-  ctx.moveTo(8, 14); ctx.lineTo(11, 6); ctx.lineTo(19, 5); ctx.lineTo(22, 12); ctx.closePath(); ctx.fill();
-  // Iron veins
-  ctx.fillStyle = '#c0553a';
-  ctx.fillRect(12, 10, 3, 2); ctx.fillRect(18, 6, 2, 3);
-  ctx.fillRect(14, 18, 4, 2); ctx.fillRect(20, 16, 2, 2);
-  // Highlight
-  ctx.fillStyle = 'rgba(255,255,255,0.2)'; ctx.beginPath();
-  ctx.arc(13, 10, 3, 0, Math.PI*2); ctx.fill();
-  return c;
-}
-
-function drawIcon_starDew() {
-  const [c, ctx] = makeCanvas(ICON, ICON);
-  ctx.fillStyle = 'rgba(100,180,250,0.15)'; ctx.beginPath();
-  ctx.arc(16, 16, 12, 0, Math.PI*2); ctx.fill();
-  ctx.fillStyle = '#64b5f6'; ctx.beginPath();
-  ctx.arc(16, 16, 6, 0, Math.PI*2); ctx.fill();
-  ctx.fillStyle = '#bbdefb'; ctx.beginPath();
-  ctx.arc(14, 14, 2.5, 0, Math.PI*2); ctx.fill();
-  ctx.fillStyle = '#ffffff'; ctx.beginPath();
-  ctx.arc(13, 13, 1, 0, Math.PI*2); ctx.fill();
-  return c;
-}
-
-function drawIcon_bubbleGrain() {
-  const [c, ctx] = makeCanvas(ICON, ICON);
-  ctx.fillStyle = '#ffd54f'; ctx.beginPath();
-  ctx.arc(10, 14, 5, 0, Math.PI*2); ctx.fill();
-  ctx.fillStyle = '#fff9c4'; ctx.beginPath();
-  ctx.arc(9, 12, 2, 0, Math.PI*2); ctx.fill();
-  ctx.fillStyle = '#ffd54f'; ctx.beginPath();
-  ctx.arc(20, 18, 5, 0, Math.PI*2); ctx.fill();
-  ctx.fillStyle = '#fff9c4'; ctx.beginPath();
-  ctx.arc(19, 16, 2, 0, Math.PI*2); ctx.fill();
-  // Float bubbles
-  ctx.strokeStyle = 'rgba(255,255,255,0.6)'; ctx.lineWidth = 0.5;
-  ctx.beginPath(); ctx.arc(10, 8, 2, 0, Math.PI*2); ctx.stroke();
-  ctx.beginPath(); ctx.arc(20, 12, 1.5, 0, Math.PI*2); ctx.stroke();
-  ctx.beginPath(); ctx.arc(16, 5, 1, 0, Math.PI*2); ctx.stroke();
-  return c;
-}
-
-function drawIcon_fireFungus() {
-  const [c, ctx] = makeCanvas(ICON, ICON);
-  // Warm glow
-  ctx.fillStyle = 'rgba(255,100,50,0.1)'; ctx.beginPath();
-  ctx.arc(16, 16, 13, 0, Math.PI*2); ctx.fill();
-  // Stem
-  ctx.fillStyle = '#c88060'; ctx.fillRect(13, 14, 6, 14);
-  ctx.fillStyle = '#d89070'; ctx.fillRect(13, 14, 3, 14);
-  // Cap
-  ctx.fillStyle = '#e85d3a'; ctx.beginPath();
-  ctx.arc(16, 12, 10, Math.PI, 0); ctx.fill();
-  ctx.fillStyle = '#ff7043'; ctx.beginPath();
-  ctx.arc(16, 11, 7, Math.PI, 0); ctx.fill();
-  // Spots
-  ctx.fillStyle = '#ffab91';
-  ctx.beginPath(); ctx.arc(11, 9, 2, 0, Math.PI*2); ctx.fill();
-  ctx.beginPath(); ctx.arc(20, 8, 2, 0, Math.PI*2); ctx.fill();
-  ctx.beginPath(); ctx.arc(16, 5, 1.5, 0, Math.PI*2); ctx.fill();
-  // Ember particle
-  ctx.fillStyle = '#ffcc80'; ctx.fillRect(16, 2, 2, 2);
-  return c;
-}
-
-// Icon cache builder
-const iconDrawers = {
-  axe: drawIcon_axe, stone: drawIcon_stone, wood: drawIcon_wood,
-  starshard: drawIcon_starshard, herb: drawIcon_herb, plank: drawIcon_plank,
-  ironIngot: drawIcon_ironIngot, crystalShard: drawIcon_crystalShard,
-  stick: drawIcon_stick, ironOre: drawIcon_ironOre,
-  starDew: drawIcon_starDew, bubbleGrain: drawIcon_bubbleGrain,
-  fireFungus: drawIcon_fireFungus
+// ==================== GAME STATE ====================
+const GS = {
+  mode:'home', // home | expedition
+  chapter:'prologue',
+  day:1, timeOfDay:'morning', // morning|day|dusk|night
+  resources:{wood:0,stone:0,starshard:0,herb:0,plank:0,ironOre:0,ironIngot:0},
+  buildings:['hut'], // built building types
+  buildingSlots:{c:null,w:null,s:null,f:null,g:null,sp:null}, // center,west,south,farm,garden,special
+  npcs:[{id:'lily',talkedToday:false,affinity:0,flags:{}}],
+  traits:[], // character traits
+  discoveries:[],
+  journal:[],
+  expedition:{active:false,direction:null,currentNode:0,nodes:[],pathIndex:0,completed:[]},
+  flags:{tutorialDone:false,firstExpedition:false,firstNight:false,dreamHad:false,firstChange:false},
+  chapterFlags:{},
+  animQueue:[], animTimer:0, particles:[],
 };
 
-function getIcon(name) {
-  if (!iconCache[name] && iconDrawers[name]) iconCache[name] = iconDrawers[name]();
-  return iconCache[name];
-}
+// ==================== CHAPTER DATA ====================
+const CHAPTERS = {
+  prologue:{
+    name:'序幕 · 苏醒',
+    location:'未知荒野',
+    intro:`你睁开眼睛。
 
-function renderAllIcons() {
-  const names = ['axe','stone','wood','starshard','herb','plank','ironIngot','crystalShard'];
-  names.forEach((n, i) => {
-    const c = getIcon(n);
-    const el = document.getElementById('icon-' + n);
-    if (c && el) { const ctx = el.getContext('2d'); ctx.clearRect(0,0,ICON,ICON); ctx.drawImage(c,0,0); }
-  });
-}
+天空是陌生的紫色。地面柔软得不像泥土。
 
-// ═══════════════════════════════
-//  BESTIARY ILLUSTRATIONS (64x64)
-// ═══════════════════════════════
+你不记得自己是谁，不记得怎么来的。但你知道一件事——这不是地球。
 
-function drawBestiary_floatRock() {
-  const [c, ctx] = makeCanvas(BEST, BEST);
-  // Dark card bg
-  ctx.fillStyle = '#1a1410'; ctx.fillRect(0, 0, BEST, BEST);
-  ctx.strokeStyle = '#3a2a1a'; ctx.lineWidth = 1; ctx.strokeRect(1, 1, BEST-2, BEST-2);
-  // Floating rocks
-  const fy = Math.sin(0.5) * 4;
-  ctx.fillStyle = '#9b6fb0'; ctx.beginPath();
-  ctx.moveTo(22, 28+fy); ctx.lineTo(10, 12+fy); ctx.lineTo(30, 6+fy);
-  ctx.lineTo(46, 14+fy); ctx.lineTo(42, 32+fy); ctx.lineTo(26, 36+fy);
-  ctx.closePath(); ctx.fill();
-  ctx.fillStyle = '#b89fd0'; ctx.beginPath();
-  ctx.moveTo(24, 18+fy); ctx.lineTo(30, 8+fy); ctx.lineTo(42, 16+fy); ctx.lineTo(34, 26+fy); ctx.closePath(); ctx.fill();
-  ctx.fillStyle = '#c8a8d8'; ctx.beginPath();
-  ctx.moveTo(24, 18+fy); ctx.lineTo(14, 15+fy); ctx.lineTo(30, 8+fy); ctx.closePath(); ctx.fill();
-  // Shadow on ground
-  ctx.fillStyle = 'rgba(0,0,0,0.2)'; ctx.beginPath();
-  ctx.ellipse(30, 46, 16, 4, 0, 0, Math.PI*2); ctx.fill();
-  // Glow particles
-  const particles = [[12,20],[44,24],[28,14],[36,32],[20,36]];
-  particles.forEach(([px, py]) => {
-    ctx.fillStyle = 'rgba(255,180,220,0.6)'; ctx.fillRect(px, py-1, 2, 2);
-    ctx.fillStyle = 'rgba(255,180,220,0.2)'; ctx.beginPath();
-    ctx.arc(px+1, py, 4, 0, Math.PI*2); ctx.fill();
-  });
-  // Sparkle
-  ctx.fillStyle = '#ffffff'; ctx.fillRect(26, 10+fy, 2, 2); ctx.fillRect(38, 18+fy, 1, 1);
-  return c;
-}
+远处，有什么东西在半空中缓缓漂浮。淡粉色的微光，像呼吸一样明灭。
 
-function drawBestiary_walkTree() {
-  const [c, ctx] = makeCanvas(BEST, BEST);
-  ctx.fillStyle = '#1a1410'; ctx.fillRect(0, 0, BEST, BEST);
-  ctx.strokeStyle = '#3a2a1a'; ctx.lineWidth = 1; ctx.strokeRect(1, 1, BEST-2, BEST-2);
-  // Trunk with motion lines
-  ctx.fillStyle = '#6b3fa0'; ctx.fillRect(26, 20, 10, 30);
-  ctx.fillStyle = '#8b5fc0'; ctx.fillRect(26, 20, 4, 30);
-  // Root feet
-  ctx.fillStyle = '#5a30a0';
-  ctx.beginPath(); ctx.moveTo(22, 50); ctx.quadraticCurveTo(14, 52, 10, 56);
-  ctx.lineTo(20, 54); ctx.lineTo(22, 50); ctx.fill();
-  ctx.beginPath(); ctx.moveTo(40, 50); ctx.quadraticCurveTo(48, 52, 52, 56);
-  ctx.lineTo(42, 54); ctx.lineTo(40, 50); ctx.fill();
-  ctx.beginPath(); ctx.moveTo(28, 50); ctx.quadraticCurveTo(26, 54, 24, 56);
-  ctx.lineTo(30, 54); ctx.lineTo(28, 50); ctx.fill();
-  // Canopy
-  ctx.fillStyle = '#7b4fb0'; ctx.beginPath();
-  ctx.arc(31, 14, 16, 0, Math.PI*2); ctx.fill();
-  ctx.fillStyle = '#9b6fd0'; ctx.beginPath();
-  ctx.arc(31, 12, 11, 0, Math.PI*2); ctx.fill();
-  ctx.fillStyle = '#ab80e0'; ctx.beginPath();
-  ctx.arc(31, 10, 6, 0, Math.PI*2); ctx.fill();
-  // Leaf details
-  ctx.fillStyle = '#c8a0f0';
-  ctx.fillRect(22, 8, 3, 2); ctx.fillRect(36, 6, 3, 2); ctx.fillRect(38, 16, 2, 2);
-  // Motion dust
-  ctx.fillStyle = 'rgba(200,180,220,0.3)';
-  ctx.fillRect(8, 54, 4, 2); ctx.fillRect(48, 54, 4, 2);
-  // Eyes (hollows)
-  ctx.fillStyle = '#3a1a60'; ctx.fillRect(25, 16, 4, 5); ctx.fillRect(33, 16, 4, 5);
-  ctx.fillStyle = '#ffd700'; ctx.fillRect(26, 17, 2, 2); ctx.fillRect(34, 17, 2, 2);
-  return c;
-}
+一个声音从背后传来：
 
-function drawBestiary_glitch() {
-  const [c, ctx] = makeCanvas(BEST, BEST);
-  ctx.fillStyle = '#000000'; ctx.fillRect(0, 0, BEST, BEST);
-  // Pixel corruption
-  const colors = ['#cc3388','#33cccc','#cccc33','#cc3333','#ffffff','#000000'];
-  for (let i = 0; i < 40; i++) {
-    ctx.fillStyle = colors[Math.floor(Math.random()*6)];
-    ctx.fillRect(Math.floor(Math.random()*16)*4, Math.floor(Math.random()*16)*4, 4, 4);
-  }
-  // Horizontal scan lines
-  for (let y = 0; y < BEST; y += 8) {
-    ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.fillRect(0, y, BEST, 2);
-    ctx.fillStyle = 'rgba(255,255,255,0.05)'; ctx.fillRect(0, y+3, BEST, 1);
-  }
-  // Displaced blocks
-  ctx.fillStyle = '#ff00ff'; ctx.fillRect(8, 20, 8, 8);
-  ctx.fillStyle = '#00ffff'; ctx.fillRect(48, 12, 8, 8);
-  ctx.fillStyle = '#ffff00'; ctx.fillRect(24, 44, 8, 4);
-  // Glitch fragment with offset
-  const offsetX = 4;
-  ctx.fillStyle = '#00ff00'; ctx.fillRect(28+offsetX, 28, 6, 6);
-  ctx.fillStyle = 'rgba(0,255,0,0.5)'; ctx.fillRect(28, 28, 6, 6);
-  // Edge tear
-  ctx.strokeStyle = '#ff00ff'; ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(10, 5); ctx.lineTo(0, 10); ctx.stroke();
-  return c;
-}
-
-function drawBestiary_mirrorButterfly() {
-  const [c, ctx] = makeCanvas(BEST, BEST);
-  ctx.fillStyle = '#1a1410'; ctx.fillRect(0, 0, BEST, BEST);
-  ctx.strokeStyle = '#3a2a1a'; ctx.lineWidth = 1; ctx.strokeRect(1, 1, BEST-2, BEST-2);
-  // Swarm of 5 butterflies
-  const positions = [[20,20,1.2],[36,16,0.8],[28,34,-1.0],[44,30,0.7],[16,36,-0.9]];
-  positions.forEach(([bx, by, dir]) => {
-    // Wings
-    ctx.fillStyle = 'rgba(130,210,255,0.7)';
-    ctx.fillRect(bx-4, by-2, 4, 3); ctx.fillRect(bx+1, by-2, 4, 3);
-    ctx.fillStyle = 'rgba(180,230,255,0.9)';
-    ctx.fillRect(bx-3, by-5, 2, 3); ctx.fillRect(bx+2, by-5, 2, 3);
-    // Body
-    ctx.fillStyle = '#333';
-    ctx.fillRect(bx, by-1, 1, 3);
-    // Mirror shimmer
-    ctx.fillStyle = 'rgba(255,255,255,0.8)'; ctx.fillRect(bx-1, by-5, 1, 1);
-  });
-  // Mirror fragments (reflecting scene)
-  ctx.fillStyle = 'rgba(100,180,220,0.3)'; ctx.fillRect(10, 8, 12, 10);
-  ctx.strokeStyle = 'rgba(200,230,255,0.5)'; ctx.lineWidth = 0.5;
-  ctx.strokeRect(10, 8, 12, 10);
-  ctx.fillStyle = 'rgba(80,160,200,0.4)'; ctx.fillRect(44, 8, 10, 8);
-  ctx.strokeStyle = 'rgba(200,230,255,0.3)'; ctx.strokeRect(44, 8, 10, 8);
-  // Reflection in mirror - tiny landscape
-  ctx.fillStyle = '#4a7c59'; ctx.fillRect(12, 12, 3, 4);
-  ctx.fillStyle = '#88ccff'; ctx.fillRect(15, 12, 2, 2);
-  return c;
-}
-
-function drawBestiary_crystalSnail() {
-  const [c, ctx] = makeCanvas(BEST, BEST);
-  ctx.fillStyle = '#1a1410'; ctx.fillRect(0, 0, BEST, BEST);
-  ctx.strokeStyle = '#3a2a1a'; ctx.lineWidth = 1; ctx.strokeRect(1, 1, BEST-2, BEST-2);
-  // Ground shadow
-  ctx.fillStyle = 'rgba(0,0,0,0.2)'; ctx.beginPath();
-  ctx.ellipse(30, 52, 18, 4, 0, 0, Math.PI*2); ctx.fill();
-  // Slime trail
-  ctx.fillStyle = 'rgba(180,200,220,0.15)'; ctx.fillRect(8, 48, 24, 4);
-  // Body
-  ctx.fillStyle = '#c8a882'; ctx.fillRect(20, 36, 28, 14);
-  ctx.fillStyle = '#d8b892'; ctx.fillRect(20, 36, 14, 14);
-  // Head
-  ctx.fillStyle = '#d8b892'; ctx.beginPath();
-  ctx.arc(48, 40, 9, 0, Math.PI*2); ctx.fill();
-  // Antennae
-  ctx.strokeStyle = '#c8a882'; ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.moveTo(52, 34); ctx.quadraticCurveTo(56, 26, 54, 22); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(48, 33); ctx.quadraticCurveTo(50, 24, 46, 20); ctx.stroke();
-  ctx.fillStyle = '#666'; ctx.fillRect(52, 22, 2, 1); ctx.fillRect(44, 20, 2, 1);
-  // Eyes
-  ctx.fillStyle = '#3a2a1a'; ctx.fillRect(50, 37, 3, 3); ctx.fillRect(44, 37, 3, 3);
-  // Crystal Shell
-  const shellGrad = ctx.createRadialGradient(24, 32, 4, 24, 32, 18);
-  shellGrad.addColorStop(0, 'rgba(255,180,220,0.6)');
-  shellGrad.addColorStop(0.5, 'rgba(220,140,180,0.4)');
-  shellGrad.addColorStop(1, 'rgba(160,80,120,0.6)');
-  ctx.fillStyle = shellGrad; ctx.beginPath();
-  ctx.arc(24, 32, 16, Math.PI, Math.PI*2); ctx.fill();
-  // Shell facets
-  ctx.strokeStyle = 'rgba(255,200,230,0.4)'; ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.moveTo(24, 16); ctx.lineTo(14, 32); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(24, 16); ctx.lineTo(24, 32); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(24, 16); ctx.lineTo(34, 32); ctx.stroke();
-  // Glow points
-  ctx.fillStyle = 'rgba(255,255,255,0.7)';
-  ctx.fillRect(22, 18, 2, 2); ctx.fillRect(18, 22, 1, 1); ctx.fillRect(28, 20, 1, 1);
-  return c;
-}
-
-function drawBestiary_memoryJelly() {
-  const [c, ctx] = makeCanvas(BEST, BEST);
-  ctx.fillStyle = '#0a0a18'; ctx.fillRect(0, 0, BEST, BEST);
-  ctx.strokeStyle = '#1a2a3a'; ctx.lineWidth = 1; ctx.strokeRect(1, 1, BEST-2, BEST-2);
-  // Ambient particles
-  for (let i = 0; i < 8; i++) {
-    ctx.fillStyle = 'rgba(139,233,253,0.2)';
-    ctx.beginPath(); ctx.arc(10+Math.random()*44, 10+Math.random()*44, 1.5, 0, Math.PI*2); ctx.fill();
-  }
-  // Bell
-  ctx.fillStyle = 'rgba(200,220,255,0.6)'; ctx.beginPath();
-  ctx.arc(32, 20, 20, Math.PI, 0); ctx.fill();
-  ctx.fillStyle = 'rgba(180,200,240,0.5)'; ctx.beginPath();
-  ctx.arc(32, 18, 14, Math.PI*0.2, Math.PI*0.8); ctx.fill();
-  // Inner core glow
-  ctx.fillStyle = 'rgba(220,240,255,0.4)'; ctx.beginPath();
-  ctx.arc(32, 22, 8, 0, Math.PI*2); ctx.fill();
-  // Tentacles
-  for (let i = 0; i < 5; i++) {
-    const tx = 22 + i * 5;
-    ctx.strokeStyle = 'rgba(139,233,253,0.35)'; ctx.lineWidth = 1.5;
-    ctx.beginPath(); ctx.moveTo(tx, 38);
-    ctx.quadraticCurveTo(tx + (i-2)*3, 46, tx + Math.sin(i)*2, 52);
-    ctx.stroke();
-    // Tentacle tips
-    ctx.fillStyle = 'rgba(180,240,255,0.4)'; ctx.beginPath();
-    ctx.arc(tx + Math.sin(i)*2, 52, 2, 0, Math.PI*2); ctx.fill();
-  }
-  // Memory fragments (tiny text-like pixels)
-  ctx.fillStyle = 'rgba(255,255,255,0.2)';
-  ctx.fillRect(12, 10, 6, 1); ctx.fillRect(14, 12, 3, 1);
-  ctx.fillRect(46, 8, 5, 1); ctx.fillRect(48, 10, 2, 1);
-  return c;
-}
-
-function drawBestiary_voidMerchant() {
-  const [c, ctx] = makeCanvas(BEST, BEST);
-  ctx.fillStyle = '#0a000a'; ctx.fillRect(0, 0, BEST, BEST);
-  // Reality tear
-  ctx.strokeStyle = 'rgba(160,80,200,0.4)'; ctx.lineWidth = 1;
-  drawRoundRect(ctx, 4, 4, BEST-8, BEST-8, 4); ctx.stroke();
-  // Body shadow
-  ctx.fillStyle = 'rgba(20,0,30,0.8)'; ctx.fillRect(16, 18, 32, 36);
-  // Hood
-  ctx.fillStyle = 'rgba(40,0,50,0.9)'; ctx.beginPath();
-  ctx.moveTo(12, 30); ctx.lineTo(32, 4); ctx.lineTo(52, 30); ctx.closePath(); ctx.fill();
-  // Hood folds
-  ctx.strokeStyle = 'rgba(80,20,100,0.4)'; ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.moveTo(32, 4); ctx.lineTo(28, 30); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(32, 4); ctx.lineTo(36, 30); ctx.stroke();
-  // Arms (shadowy)
-  ctx.fillStyle = 'rgba(30,0,40,0.7)';
-  ctx.fillRect(4, 26, 14, 6); ctx.fillRect(46, 26, 14, 6);
-  ctx.fillStyle = 'rgba(40,0,50,0.5)'; ctx.fillRect(4, 22, 6, 6); ctx.fillRect(54, 22, 6, 6);
-  // Glowing eyes
-  const eyeGlow = 0.8;
-  ctx.fillStyle = `rgba(200,150,255,${eyeGlow})`; ctx.fillRect(22, 18, 6, 6); ctx.fillRect(36, 18, 6, 6);
-  ctx.fillStyle = `rgba(230,200,255,${eyeGlow*0.6})`; ctx.fillRect(23, 19, 3, 3); ctx.fillRect(37, 19, 3, 3);
-  // Floating star particles
-  const stars = [[10,14],[50,10],[20,6],[44,14],[34,56],[18,54]];
-  stars.forEach(([sx, sy]) => {
-    ctx.fillStyle = 'rgba(200,150,255,0.5)'; ctx.fillRect(sx, sy, 2, 2);
-    ctx.fillStyle = 'rgba(200,150,255,0.15)'; ctx.beginPath();
-    ctx.arc(sx+1, sy+1, 3, 0, Math.PI*2); ctx.fill();
-  });
-  return c;
-}
-
-const bestiaryDrawers = {
-  float_rock: drawBestiary_floatRock, walk_tree: drawBestiary_walkTree,
-  glitch: drawBestiary_glitch, mirror_butterfly: drawBestiary_mirrorButterfly,
-  crystal_snail: drawBestiary_crystalSnail, memory_jelly: drawBestiary_memoryJelly,
-  void_merchant: drawBestiary_voidMerchant
-};
-
-function getBestiary(id) {
-  if (!bestiaryCache[id] && bestiaryDrawers[id]) bestiaryCache[id] = bestiaryDrawers[id]();
-  return bestiaryCache[id];
-}
-
-// ==================== 1. GAME STATE ====================
-const S = {
-  player: { x: 16, y: 18, vx: 0, vy: 0, speed: 3, facing: 0 },
-  camera: { x: 0, y: 0 },
-  keys: {},
-  time: 360,         // minutes from 6:00 (360=noon, 1080=midnight)
-  daySpeed: 0.5,
-  inventory: {
-    stone: 0, wood: 0, starshard: 0, herb: 0,
-    plank: 0, stick: 0, ironOre: 0, ironIngot: 0,
-    crystalShard: 0, starDew: 0, bubbleGrain: 0, fireFungus: 0
+"你终于醒了！我还以为这次又是个空的呢——"`,
+    expeditions:[{
+      id:'east_wilds',
+      name:'东部荒野',
+      nodes:[
+        {type:'event',event:'float_rock_discovery',label:'?'},
+        {type:'event',event:'talking_berry',label:'?'},
+        {type:'event',event:'walking_tree_first',label:'?'},
+        {type:'return',event:null,label:'🏠'},
+      ],
+      rewards:{wood:4,stone:2,starshard:1,herb:3},
+      storyRewards:['发现世界上有会漂浮的石头','听到了奇怪的对话（但没看到说话的人）','看到一棵树在走 它在躲避什么？'],
+    }],
   },
-  hotbarSel: 0,
-  hotbarMap: ['axe','stone','wood','starshard','herb','plank','ironIngot','crystalShard'],
-  buildings: [{ x: 15, y: 17, type: 'hut', level: 1 }],
-  messages: [],
-  msgTimer: 0,
-  discoveries: [],
-  bestiary: [],
-  territoryLevel: 1,
-  territoryRadius: 4,
-  particles: [],
-  npcs: [{
-    x: 15, y: 19, type: 'elf', name: '精灵助手 莉莉',
-    dialogs: [
-      "你终于醒了！欢迎来到这个世界~",
-      "东边有一些奇怪的石头... 它们在飞！",
-      "多收集一些材料，我们可以建造更多东西。",
-      "天快黑了，注意安全哦！",
-      "这片土地曾经属于另一位领主...",
-      "那些蝴蝶... 它们会映出附近隐藏的东西，很有用。",
-      "蜗牛壳在晚上会发光，也许可以做成灯？",
-      "水母——小心，它们会让你看到不该看的东西。",
-      "有个奇怪的家伙偶尔来附近... 它不说话，但可以交易。"
-    ],
-    dialogIdx: 0
-  }],
-  worldData: null,
-  uiPanel: null,     // null | 'crafting' | 'bestiary' | 'building' | 'garden' | 'trade'
-  panelSubTab: 0,
-  creatures: [],
-  crops: [],         // { x, y, type, growth, gardenRef }
-  buildReqs: {
-    'craft_table': { wood: 10, stone: 5 },
-    'furnace':     { stone: 10, ironOre: 3 },
-    'garden':      { wood: 5, herb: 3 },
-    'storage':     { wood: 5, stone: 3 },
-    'watchtower':  { wood: 8, stone: 6, ironIngot: 2 },
-    'portal':      { starshard: 5, crystalShard: 3, ironIngot: 2 }
+  chapter1:{
+    name:'第一章 · 林中之声', location:'漫步森林',
+    intro:'',
+    expeditions:[],
   },
-  nextMemoryIdx: 0,
-  voidTraderTimer: 0,
-  autoSaveTimer: 0
 };
 
-// ==================== 2. CRAFTING RECIPES ====================
-const RECIPES = [
-  { id: 'plank',      name: '木板',   icon: '🪵', output: { plank: 2 },     input: { wood: 1 },             station: 'craft_table' },
-  { id: 'stick',      name: '木棍',   icon: '🥢', output: { stick: 4 },     input: { wood: 1 },             station: 'craft_table' },
-  { id: 'ironIngot',  name: '铁锭',   icon: '🔩', output: { ironIngot: 1 }, input: { ironOre: 2, wood: 1 }, station: 'furnace' },
-  { id: 'crystalPol', name: '打磨晶片',icon: '💎', output: { crystalShard: 2 },input: { crystalShard: 1 },  station: 'craft_table' },
-];
+// ==================== EVENT DATA ====================
+const EVENTS = {
+  float_rock_discovery:{
+    title:'浮游岩群',
+    scene:'float_rocks',
+    text:`前方的草地突然变得稀疏，取而代之的是一片奇异的景象——
 
-// ==================== 3. BESTIARY DATA ====================
-const BESTIARY_DB = {
-  float_rock:    { name:'浮游岩群',   icon:'🪨', flavor:'满月之夜会微微炽热，仿佛仍记得千万年前的阳光。' },
-  walk_tree:     { name:'漫步树',     icon:'🌲', flavor:'昨天它还不在这个位置。砍它，它会生气。' },
-  glitch:        { name:'世界边缘花屏',icon:'👾', flavor:'像素开始碎裂。这里...真的是"世界"吗？' },
-  mirror_butterfly:{ name:'镜面蝶群', icon:'🦋', flavor:'不攻击人，但每片翅膀都映出不该存在于此刻的画面。' },
-  crystal_snail: { name:'晶壳蜗牛',   icon:'🐌', flavor:'壳是活的水晶棱镜。白天蓄光，夜里为迷途者照路。' },
-  memory_jelly:  { name:'记忆水母',   icon:'🪼', flavor:'触碰它，你会短暂地看到不该属于你的记忆。前任领主？' },
-  void_merchant: { name:'虚空商贩',   icon:'👤', flavor:'不说话，不解释。你放什么，它给什么——规则靠自己试。' },
+十几块大小不一的岩石悬浮在半人高的空中，缓缓上下起伏。它们的表面泛着淡淡的粉色光芒，像在呼吸。
+
+最奇怪的是：你靠近时，它们似乎微微向你倾斜。像是在...看？`,
+    choices:[
+      {text:'冲过去收集一些',action:'collect_risky',result:`你冲进岩石群中，伸手去抓最近的一块。\n\n它意外地轻——几乎像泡沫一样。你一口气抱了三块小的，塞进背包。但有一块大石头在你触碰后突然坠地，发出沉闷的声响。\n\n+2 ✨星之碎片 +1 🪨石头`},
+      {text:'绕路，别碰这些怪东西',action:'bypass',result:`你决定不碰这些来路不明的石头，从旁边绕了过去。\n\n但走出一段距离后回头——它们好像...跟着你移动了一点？\n\n也许是错觉。但你加快了脚步。`},
+      {text:'停下来仔细观察',action:'observe',result:`你蹲下来仔细看了好一阵。\n\n这些石头的内部似乎有细小的脉络在发光，像血管。表面偶尔有细小的晶体在生长——又迅速融化。\n\n莉莉后来说："浮游石会记住触碰过它们的人。你在上面留了印记。"\n\n图鉴解锁 +无额外资源但获得关键信息`},
+    ]
+  },
+  talking_berry:{
+    title:'窃窃私语的浆果丛',
+    scene:'berry_bush',
+    text:`你发现了一丛果实异常饱满的野莓。正要伸手去摘——
+
+"别碰！那是我的——"
+
+你猛地转身。没有人。
+
+"......开玩笑的。摘吧摘吧。"
+
+声音来自浆果丛本身？不对——声音像是从你脑子里直接响起的。`,
+    choices:[
+      {text:'摘了就跑',action:'grab',result:`你一把薅下三把野莓，拔腿就跑。\n\n"呜哇——粗鲁！"\n\n+3 🌿野莓\n\n那个声音让你今天一整天都心神不宁。是谁在说话？为什么只有你能听到？`},
+      {text:'"你是谁？出来！"',action:'confront',result:`你对着空气喊道。\n\n沉默。然后——\n\n"...你居然能听到我。有意思。你跟他们不一样。"\n\n"他们？谁是'他们'？"\n\n"那些不会听的人。"\n\n之后再也没有声音了。但这句话让你脊背发凉。\n\n🌿解锁特性萌芽：【耳语者】— 能听到某些生物的心灵回响`},
+      {text:'小心地摘几颗留一半',action:'gentle',result:`你摘了几颗最熟的，留下了一半。\n\n"...谢谢。"声音变得温和了些。"很少有人这么做。你要是再往东走，小心那些会走的树。它们在躲什么东西。"\n\n+2 🌿野莓 +获得关于漫步树的警告`},
+    ]
+  },
+  walking_tree_first:{
+    title:'漫步的巨树',
+    scene:'walking_tree',
+    text:`你的视野里出现了一棵树。
+
+不是它的大小惊人——而是它刚才不在那里。你发誓你三秒前看这个方向时，这里是一片空地。
+
+树干底部有粗壮的根须在地面上缓慢蠕动。整棵树以肉眼可见的速度...向左边移动。
+
+然后它停了下来。树干上，一块树皮裂开，露出了一个发光的空洞——像一只眼睛。
+
+它在看着你。`,
+    choices:[
+      {text:'砍！（需要斧头——目前没有）',action:'attack',disabled:true,disabledText:'需要解锁工具台制作斧头',result:''},
+      {text:'缓缓后退，不要对视',action:'retreat',result:`你慢慢后退，目光没有移开它。\n\n它"注视"了你几秒，树冠微微抖动——像是在点头。然后继续缓慢向左移动，消失在树林边缘。\n\n+1 🪵活木（它离开时掉落了一截树枝）\n\n"它在躲避什么"——浆果丛的话在你脑海中回响。`},
+      {text:'站在原地，让它看',action:'stay',result:`你没有动。\n\n树"注视"了你整整十秒。然后做出了一件你完全没预料到的事——\n\n它的一根树枝垂下来，轻轻碰了碰你的肩膀。\n\n然后树根加速蠕动，整棵树快速离开了。你低头——肩膀上的衣服沾了一些发光的树液，凉凉的。\n\n+1 🪵活木  +🌿你的肩膀偶尔会微微发光（夜晚更明显）`},
+    ]
+  },
 };
 
-// ==================== 4. BUILDING DEFINITIONS ====================
-const BUILDING_DB = {
-  craft_table: { name:'工具台', desc:'木头→木板/木棍', icon:'🪚', req:{wood:10,stone:5} },
-  furnace:     { name:'熔炉',   desc:'矿石→金属锭',     icon:'🔥', req:{stone:10,ironOre:3} },
-  garden:      { name:'菜园',   desc:'种植奇异作物',     icon:'🌱', req:{wood:5,herb:3} },
-  storage:     { name:'仓库',   desc:'储物空间',         icon:'📦', req:{wood:5,stone:3} },
-  watchtower:  { name:'瞭望塔', desc:'扩大视野',         icon:'🔭', req:{wood:8,stone:6,ironIngot:2} },
-  portal:      { name:'精灵门', desc:'随机传送',         icon:'🌀', req:{starshard:5,crystalShard:3,ironIngot:2} },
-};
-
-// ==================== 5. CROP DEFINITIONS ====================
-const CROP_DB = {
-  moonDew:    { name:'月露草',   icon:'🌙', desc:'仅夜晚开花，产星露', growTime:180, harvest:{starDew:2}, nightOnly:true },
-  bubbleWheat:{ name:'气泡麦',   icon:'🌾', desc:'成熟时麦粒浮空飘走', growTime:240, harvest:{bubbleGrain:3}, nightOnly:false },
-  fireFungus: { name:'火绒菌',   icon:'🍄', desc:'靠近火源长得更快',   growTime:360, harvest:{fireFungus:2}, nightOnly:false, heatBoost:true },
-};
-
-// ==================== 6. MEMORY FRAGMENTS ====================
-const MEMORIES = [
-  "「第37天。浮游石越来越多了。它们在往东移动。我要跟着去。」",
-  "「她——那个精灵——说这很正常。但她的眼神在躲。」",
-  "「地下的声音越来越近了。我开始听得懂它说什么了。」",
-  "「不要敲钟。不要敲钟。不要——（字迹到这里变得潦草）」",
-  "「今天是月圆。镜面蝶在看我。我知道它们在看什么。」",
-  "「虚空中的那个东西今天又来了。它的价格变了。它在学。」",
-];
-
-// ==================== 7. WORLD GENERATION ====================
-function genWorld() {
-  const w = new Array(WORLD_H).fill(null).map(() => new Array(WORLD_W).fill(null));
-  for (let y = 0; y < WORLD_H; y++)
-    for (let x = 0; x < WORLD_W; x++)
-      w[y][x] = { tile: 'grass', variant: 0 };
-
-  // River
-  for (let y = 10; y < 28; y++)
-    for (let dx = -1; dx <= 1; dx++) {
-      const x = 28 + dx;
-      if (x >= 0 && x < WORLD_W) w[y][x] = { tile: 'water', variant: 0 };
-    }
-
-  // Bridge
-  w[18][28] = { tile: 'bridge', variant: 0 };
-  w[19][28] = { tile: 'bridge', variant: 0 };
-
-  // Trees
-  const trees = [[8,12],[10,10],[12,14],[6,16],[20,8],[22,10],[25,13],[35,15],[38,12],[40,10],[42,16],[45,14],[48,9],[50,18],[30,22],[32,20],[34,24],[8,25],[10,28],[14,26]];
-  trees.forEach(([x,y]) => { w[y][x] = { tile: 'tree', variant: (x+y)%3, harvested: false }; });
-
-  // Rocks (some with iron ore)
-  const rocks = [[9,20,false],[11,22,false],[13,18,false],[7,24,false],[22,15,true],[24,18,false],[36,20,true],[38,25,false],[43,22,false],[46,20,true],[33,26,false],[10,30,false]];
-  rocks.forEach(([x,y,iron]) => { w[y][x] = { tile: 'rock', variant: (x+y)%2, harvested: false, ironOre: iron }; });
-
-  // Berry bushes
-  [[14,20],[16,22],[20,25],[23,20],[26,22],[44,18],[47,22]].forEach(([x,y]) => {
-    w[y][x] = { tile: 'berry', variant: 0, harvested: false };
-  });
-
-  // ANOMALY: Floating rocks (east of river)
-  for (let y = 14; y < 30; y += 3)
-    for (let x = 33; x < 42; x += 4)
-      if ((x + y) % 5 === 0 && !(x >= 37 && x <= 39 && y >= 20 && y <= 24))
-        w[y][x] = { tile: 'float_rock', variant: (x+y)%3, harvested: false, offset: Math.random()*Math.PI*2 };
-
-  // ANOMALY: Walking trees (far east)
-  [[52,10],[54,12],[52,16],[55,20],[53,25],[56,28]].forEach(([x,y]) => {
-    w[y][x] = { tile: 'walk_tree', variant: 0, phase: Math.random()*Math.PI*2, harvested: false };
-  });
-
-  // Home area - cleared
-  for (let y = 14; y <= 22; y++)
-    for (let x = 12; x <= 18; x++)
-      if (w[y][x].tile === 'tree' || w[y][x].tile === 'rock') w[y][x] = { tile: 'grass', variant: 0 };
-
-  // Dirt path from home to bridge
-  for (let x = 18; x <= 28; x++) w[18][x] = { tile: 'path', variant: 0 };
-
-  // Mystery edge (far east)
-  for (let y = 5; y < 35; y++)
-    for (let x = 57; x < 60; x++)
-      w[y][x] = { tile: 'glitch', variant: 0 };
-
-  return w;
-}
-
-// ==================== 8. CREATURE SPAWNING ====================
-function spawnCreatures() {
-  S.creatures = [];
-
-  // Mirror Butterfly swarms (near glitch zone)
-  for (let i = 0; i < 3; i++) {
-    S.creatures.push({
-      type: 'mirror_butterfly', x: 48 + Math.random() * 8, y: 8 + Math.random() * 28,
-      phase: Math.random() * Math.PI * 2, flapSpeed: 0.02 + Math.random() * 0.02,
-      particles: []
-    });
-  }
-
-  // Crystal Snails (near water)
-  for (let i = 0; i < 4; i++) {
-    S.creatures.push({
-      type: 'crystal_snail', x: 26 + Math.random() * 8, y: 10 + Math.random() * 18,
-      phase: Math.random() * Math.PI * 2, charge: Math.random(),
-      direction: Math.random() > 0.5 ? 1 : -1, speed: 0.003 + Math.random() * 0.005
-    });
-  }
-
-  // Memory Jellyfish (near float rocks)
-  for (let i = 0; i < 3; i++) {
-    S.creatures.push({
-      type: 'memory_jelly', x: 33 + Math.random() * 10, y: 14 + Math.random() * 16,
-      phase: Math.random() * Math.PI * 2, floatOffset: Math.random() * Math.PI * 2,
-      memoryIdx: i
-    });
-  }
-
-  // Void Merchant (appears periodically, respawn logic in update)
-  S.voidTraderTimer = 600 + Math.random() * 600; // First appearance after some time
-}
-
-function spawnVoidMerchant() {
-  // Remove existing merchant
-  S.creatures = S.creatures.filter(c => c.type !== 'void_merchant');
-  // Spawn at random remote location
-  const spawns = [
-    { x: 48, y: 8 }, { x: 50, y: 20 }, { x: 45, y: 28 }, { x: 40, y: 30 },
-    { x: 20, y: 30 }, { x: 8, y: 26 }
-  ];
-  const pos = spawns[Math.floor(Math.random() * spawns.length)];
-  S.creatures.push({
-    type: 'void_merchant', x: pos.x, y: pos.y,
-    items: ['starshard','crystalShard','ironIngot','starDew'],
-    prices: { starshard: 3, crystalShard: 5, ironIngot: 4, starDew: 2 },
-    // What it wants (randomized each appearance)
-    wants: ['wood','stone','herb','plank','stick'][Math.floor(Math.random()*5)],
-    wantAmt: 3 + Math.floor(Math.random() * 5),
-    phase: Math.random() * Math.PI * 2
-  });
-  showMsg('🌌 虚空中出现了一个身影...', '#dda0dd');
-  if (!S.discoveries.includes('void_merchant')) discoverBestiary('void_merchant');
-}
-
-// ==================== 9. PARTICLES & MESSAGES ====================
-function spawnParticles(x, y, color, count) {
-  for (let i = 0; i < count; i++) {
-    S.particles.push({ x, y, color,
-      vx: (Math.random()-0.5)*4, vy: (Math.random()-0.5)*4 - 2,
-      life: 30 + Math.random()*20, maxLife: 50 });
-  }
-}
-
-function showMsg(text, color='#ffffff') {
-  S.messages.push({ text, color, timer: 120 });
-}
-
-// ==================== 10. BESTIARY SYSTEM ====================
-function discoverBestiary(id) {
-  if (S.discoveries.includes(id)) return;
-  S.discoveries.push(id);
-  const entry = BESTIARY_DB[id];
-  if (entry) {
-    S.bestiary.push({ id, ...entry, discoveredAt: S.time });
-    showMsg(`🔍 图鉴更新：${entry.name}`, '#ffd700');
-  }
-}
-
-// ==================== 11. BUILDING SYSTEM ====================
-function canBuild(type) {
-  const req = BUILDING_DB[type] ? BUILDING_DB[type].req : S.buildReqs[type];
-  if (!req) return false;
-  for (const [mat, amt] of Object.entries(req))
-    if ((S.inventory[mat] || 0) < amt) return false;
-  return true;
-}
-
-function tryBuild(type) {
-  const req = BUILDING_DB[type] ? BUILDING_DB[type].req : S.buildReqs[type];
-  if (!req) return false;
-  if (!canBuild(type)) {
-    const costStr = Object.entries(req).map(([k,v]) => `${v}${matIcon(k)}`).join('+');
-    showMsg(`需要 ${costStr}`, '#ff6b6b');
-    return false;
-  }
-  // Deduct materials
-  for (const [mat, amt] of Object.entries(req))
-    S.inventory[mat] -= amt;
-  // Place building
-  const dirs = [[0,-1],[1,0],[0,1],[-1,0]];
-  const dx = dirs[S.player.facing][0], dy = dirs[S.player.facing][1];
-  const bx = Math.floor(S.player.x) + dx, by = Math.floor(S.player.y) + dy;
-  // Don't build on water or glitch
-  if (bx >= 0 && bx < WORLD_W && by >= 0 && by < WORLD_H) {
-    const tile = S.worldData[by][bx];
-    if (tile.tile === 'water' || tile.tile === 'glitch') {
-      showMsg('这里不能建造！', '#ff6b6b');
-      return false;
-    }
-  }
-  S.buildings.push({ x: bx, y: by, type, level: 1 });
-  showMsg(`建造完成！${BUILDING_DB[type]?.icon || '🏗️'} ${BUILDING_DB[type]?.name || type}`, '#ffd700');
-  spawnParticles(bx*TILE+TILE/2, by*TILE+TILE/2, '#ffd700', 15);
-  updateTerritory();
-  return true;
-}
-
-function matIcon(name) {
-  const icons = { wood:'🪵', stone:'🪨', starshard:'✨', herb:'🌿', plank:'🪵', stick:'🥢',
-    ironOre:'🪨', ironIngot:'🔩', crystalShard:'💎', starDew:'💧' };
-  return icons[name] || name;
-}
-
-function upgradeBuilding(building) {
-  const costs = { 1: { wood: 5, stone: 5 }, 2: { wood: 10, stone: 8, ironIngot: 2 }, 3: { wood: 15, stone: 12, ironIngot: 4, starshard: 2 }, 4: { wood: 20, stone: 20, ironIngot: 6, starshard: 5 } };
-  const cost = costs[building.level];
-  if (!cost) { showMsg('已达最高等级！', '#ffd700'); return false; }
-  for (const [mat, amt] of Object.entries(cost))
-    if ((S.inventory[mat] || 0) < amt) {
-      showMsg(`升级需要 ${Object.entries(cost).map(([k,v])=>`${v}${matIcon(k)}`).join('+')}`, '#ff6b6b');
-      return false;
-    }
-  for (const [mat, amt] of Object.entries(cost)) S.inventory[mat] -= amt;
-  building.level++;
-  showMsg(`${BUILDING_DB[building.type]?.name||building.type} 升级到 Lv.${building.level}！`, '#ffd700');
-  spawnParticles(building.x*TILE+TILE/2, building.y*TILE+TILE/2, '#ffd700', 20);
-  updateTerritory();
-  return true;
-}
-
-function updateTerritory() {
-  const totalBuildings = S.buildings.length;
-  const totalLevels = S.buildings.reduce((s, b) => s + b.level, 0);
-  let newLevel = 1;
-  if (totalLevels >= 15) newLevel = 5;
-  else if (totalLevels >= 10) newLevel = 4;
-  else if (totalLevels >= 6) newLevel = 3;
-  else if (totalLevels >= 3) newLevel = 2;
-
-  if (newLevel !== S.territoryLevel) {
-    S.territoryLevel = newLevel;
-    S.territoryRadius = 3 + newLevel;
-    showMsg(`🏠 领地升级！Lv.${newLevel} — 范围扩大了`, '#ffd700');
-    spawnParticles(15.5*TILE, 17.5*TILE, '#ffd700', 25);
-  }
-}
-
-// ==================== 12. CRAFTING SYSTEM ====================
-function isNearStation(stationType) {
-  const px = S.player.x, py = S.player.y;
-  return S.buildings.some(b => {
-    if (b.type !== stationType) return false;
-    return Math.abs(b.x + 0.5 - px) < 3 && Math.abs(b.y + 0.5 - py) < 3;
-  });
-}
-
-function canCraft(recipe) {
-  for (const [mat, amt] of Object.entries(recipe.input))
-    if ((S.inventory[mat] || 0) < amt) return false;
-  return true;
-}
-
-function doCraft(recipeId) {
-  const recipe = RECIPES.find(r => r.id === recipeId);
-  if (!recipe) return;
-  if (!canCraft(recipe)) { showMsg('材料不足！', '#ff6b6b'); return; }
-  if (!isNearStation(recipe.station)) {
-    const sname = BUILDING_DB[recipe.station]?.name || recipe.station;
-    showMsg(`需要靠近${sname}！`, '#ff6b6b');
-    return;
-  }
-  for (const [mat, amt] of Object.entries(recipe.input)) S.inventory[mat] -= amt;
-  for (const [mat, amt] of Object.entries(recipe.output)) S.inventory[mat] = (S.inventory[mat]||0) + amt;
-  showMsg(`制作完成：${recipe.name} +${Object.values(recipe.output)[0]}`, '#88ff88');
-  updateUI();
-  renderPanel();
-}
-
-// ==================== 13. GARDEN / CROP SYSTEM ====================
-function plantCrop(building, cropType) {
-  if (building.type !== 'garden') return;
-  // Check if garden has space (max 4 plots)
-  const existingPlots = S.crops.filter(c => c.gardenX === building.x && c.gardenY === building.y).length;
-  if (existingPlots >= 4) { showMsg('菜园已满！', '#ff6b6b'); return; }
-  const seedCost = { moonDew: { herb: 2 }, bubbleWheat: { herb: 1, wood: 1 }, fireFungus: { herb: 2, ironOre: 1 } };
-  const cost = seedCost[cropType];
-  for (const [mat, amt] of Object.entries(cost))
-    if ((S.inventory[mat] || 0) < amt) { showMsg('材料不足！', '#ff6b6b'); return; }
-  for (const [mat, amt] of Object.entries(cost)) S.inventory[mat] -= amt;
-  const plotIdx = existingPlots;
-  const offX = [0.3, 0.7, 0.3, 0.7][plotIdx];
-  const offY = [0.2, 0.2, 0.6, 0.6][plotIdx];
-  S.crops.push({
-    x: building.x + offX, y: building.y + offY,
-    type: cropType, growth: 0,
-    gardenX: building.x, gardenY: building.y,
-    plotIdx
-  });
-  showMsg(`种下了 ${CROP_DB[cropType].icon} ${CROP_DB[cropType].name}`, '#88ff88');
-  updateUI();
-}
-
-function harvestCrop(cropIdx) {
-  const crop = S.crops[cropIdx];
-  if (!crop || crop.growth < 1) return;
-  const def = CROP_DB[crop.type];
-  for (const [item, amt] of Object.entries(def.harvest))
-    S.inventory[item] = (S.inventory[item]||0) + amt;
-  spawnParticles(crop.x*TILE+TILE/2, crop.y*TILE+TILE/2, '#ffd700', 8);
-  showMsg(`收获 ${def.icon} ${def.name}！`, '#88ff88');
-  // Reset crop
-  crop.growth = 0;
-  updateUI();
-}
-
-// ==================== 14. VOID TRADING ====================
-function tradeWithVoid(merchant, item, amount) {
-  const price = merchant.prices[item] || 5;
-  if ((S.inventory[merchant.wants] || 0) < price) {
-    showMsg(`${matIcon(merchant.wants)}不足！虚空商贩想要 ${merchant.wants}`, '#ff6b6b');
-    return;
-  }
-  if ((S.inventory[item] || 0) >= 99) { showMsg('背包已满！', '#ff6b6b'); return; }
-  S.inventory[merchant.wants] -= price;
-  S.inventory[item] = (S.inventory[item]||0) + 1;
-  showMsg(`交易完成：${price}${matIcon(merchant.wants)} → 1${matIcon(item)}`, '#dda0dd');
-  // Merchant prices change after trade
-  merchant.prices[item] = Math.max(1, (merchant.prices[item] || 5) + Math.floor(Math.random()*3) - 1);
-  updateUI();
-}
-
-// ==================== 15. INPUT HANDLING ====================
-Game = {
-  input(action) {
-    if (action === 'tab') { togglePanel('main'); return; }
-    if (S.memoryShowing) { closeMemory(); return; }
-
-    switch(action) {
-      case 'act': {
-        const px = Math.floor(S.player.x + 0.5), py = Math.floor(S.player.y + 0.5);
-        const dirs = [[0,-1],[1,0],[0,1],[-1,0]];
-        const dx = dirs[S.player.facing][0], dy = dirs[S.player.facing][1];
-        const tx = px + dx, ty = py + dy;
-
-        // Check NPC
-        const npc = S.npcs.find(n => Math.abs(tx - n.x) + Math.abs(ty - n.y) <= 1);
-        if (npc) { talkNPC(npc); return; }
-
-        // Check buildings (upgrade)
-        const building = S.buildings.find(b => b.x === tx && b.y === ty);
-        if (building) {
-          if (building.type === 'garden') {
-            // Open garden UI
-            S.panelSubTab = 0;
-            togglePanel('garden', building);
-            return;
-          }
-          // Try upgrade
-          upgradeBuilding(building);
-          updateUI();
-          return;
-        }
-
-        // Check creatures
-        const creature = S.creatures.find(c => Math.abs(tx - c.x) + Math.abs(ty - c.y) <= 1.5);
-        if (creature) { interactCreature(creature); return; }
-
-        // Check tile
-        if (tx >= 0 && tx < WORLD_W && ty >= 0 && ty < WORLD_H) {
-          const tile = S.worldData[ty][tx];
-          if (tile.tile === 'tree' && !tile.harvested) {
-            tile.harvested = true; S.inventory.wood += 2;
-            spawnParticles(tx*TILE+TILE/2, ty*TILE+TILE/2, '#8B6914', 6);
-            showMsg('+2 🪵 木材', '#c4956a'); updateUI();
-          } else if (tile.tile === 'rock' && !tile.harvested) {
-            tile.harvested = true;
-            S.inventory.stone += 2;
-            if (tile.ironOre) { S.inventory.ironOre = (S.inventory.ironOre||0) + 1; showMsg('+2 🪨 石头 +1 🪨 铁矿石', '#a0a0a0'); }
-            else showMsg('+2 🪨 石头', '#a0a0a0');
-            spawnParticles(tx*TILE+TILE/2, ty*TILE+TILE/2, '#808080', 6);
-            if (tile.ironOre && !S.discoveries.includes('ironOre')) { discoverBestiary('ironOre'); }
-            updateUI();
-          } else if (tile.tile === 'float_rock' && !tile.harvested) {
-            tile.harvested = true; S.inventory.starshard += 1; S.inventory.stone += 1;
-            spawnParticles(tx*TILE+TILE/2, ty*TILE+TILE/2, '#ff69b4', 12);
-            showMsg('+1 ✨ 星之碎片！', '#ff69b4');
-            discoverBestiary('float_rock'); updateUI();
-          } else if (tile.tile === 'berry' && !tile.harvested) {
-            tile.harvested = true; S.inventory.herb += 2;
-            spawnParticles(tx*TILE+TILE/2, ty*TILE+TILE/2, '#ff6b6b', 4);
-            showMsg('+2 🌿 野莓', '#ff6b6b'); updateUI();
-          } else if (tile.tile === 'walk_tree' && !tile.harvested) {
-            tile.harvested = true; S.inventory.wood += 3;
-            spawnParticles(tx*TILE+TILE/2, ty*TILE+TILE/2, '#9b59b6', 10);
-            showMsg('+3 🪵 活木！', '#9b59b6');
-            discoverBestiary('walk_tree'); updateUI();
-          }
-        }
-        break;
-      }
-      case 'build': togglePanel('building'); break;
-    }
-  }
-};
-
-function interactCreature(creature) {
-  switch(creature.type) {
-    case 'mirror_butterfly':
-      // Reveals nearby resources
-      const nearby = [];
-      for (let dy = -5; dy <= 5; dy++)
-        for (let dx = -5; dx <= 5; dx++) {
-          const cx = Math.floor(creature.x + dx), cy = Math.floor(creature.y + dy);
-          if (cx >= 0 && cx < WORLD_W && cy >= 0 && cy < WORLD_H) {
-            const t = S.worldData[cy][cx];
-            if (!t.harvested && (t.tile === 'float_rock' || t.tile === 'walk_tree' || t.ironOre))
-              nearby.push(t);
-          }
-        }
-      if (nearby.length > 0) {
-        showMsg(`🦋 镜面蝶映出了 ${nearby.length} 处隐藏资源！`, '#88ccff');
-        // Flash particles at those locations
-        nearby.forEach(() => spawnParticles(creature.x*TILE+Math.random()*TILE*10, creature.y*TILE+Math.random()*TILE*10, '#88ccff', 3));
-      } else {
-        showMsg('🦋 蝶群轻轻飞舞，一切安好。', '#88ccff');
-      }
-      spawnParticles(creature.x*TILE, creature.y*TILE, '#88ccff', 15);
-      discoverBestiary('mirror_butterfly');
-      break;
-
-    case 'crystal_snail':
-      if (S.time > 900 || S.time < 360) {
-        // Night: collect crystal shard
-        S.inventory.crystalShard = (S.inventory.crystalShard||0) + 1;
-        showMsg('🐌 蜗牛壳折射出一片晶片！+1 💎', '#ff69b4');
-        spawnParticles(creature.x*TILE, creature.y*TILE, '#ff69b4', 10);
-      } else {
-        showMsg('🐌 晶壳蜗牛正在蓄光...晚上再来吧。', '#ffaa88');
-      }
-      discoverBestiary('crystal_snail');
-      break;
-
-    case 'memory_jelly':
-      S.memoryShowing = true;
-      S.currentMemory = MEMORIES[S.nextMemoryIdx % MEMORIES.length];
-      S.nextMemoryIdx++;
-      document.getElementById('memory-text').textContent = S.currentMemory;
-      document.getElementById('memory-overlay').classList.add('show');
-      discoverBestiary('memory_jelly');
-      break;
-
-    case 'void_merchant':
-      S.panelSubTab = 0;
-      togglePanel('trade', creature);
-      break;
-  }
-}
-
-function closeMemory() {
-  S.memoryShowing = false;
-  document.getElementById('memory-overlay').classList.remove('show');
-}
-
-function talkNPC(npc) {
-  const msg = npc.dialogs[npc.dialogIdx % npc.dialogs.length];
-  npc.dialogIdx++;
-  showMsg(`"${msg}"`, '#88ff88');
-  spawnParticles(npc.x*TILE+TILE/2, npc.y*TILE+TILE/2, '#88ff88', 8);
-}
-
-// ==================== 16. KEYBOARD ====================
-window.addEventListener('keydown', e => {
-  S.keys[e.key] = true;
-  if (e.key === ' ' || e.key === 'e') { e.preventDefault(); Game.input('act'); }
-  if (e.key === 'b') { e.preventDefault(); Game.input('build'); }
-  if (e.key === 'Tab') { e.preventDefault(); Game.input('tab'); }
-  if (e.key === 'Escape') { e.preventDefault(); togglePanel(null); }
-  if (e.key >= '1' && e.key <= '8') { S.hotbarSel = parseInt(e.key)-1; updateUI(); }
-  e.preventDefault();
-});
-window.addEventListener('keyup', e => { S.keys[e.key] = false; });
-
-// Mouse / Touch
-const canvas = document.getElementById('game');
-canvas.addEventListener('click', e => {
-  const rect = canvas.getBoundingClientRect();
-  const cx = rect.width / 2, cy = rect.height / 2;
-  const dx = e.clientX - rect.left - cx, dy = e.clientY - rect.top - cy;
-  if (Math.abs(dx) < 40 && Math.abs(dy) < 40) Game.input('act');
-});
-
-// ==================== 17. PANEL UI ====================
-let currentGardenBuilding = null;
-let currentTradeMerchant = null;
-
-function togglePanel(panelType, data) {
-  if (S.uiPanel === panelType && !data) { S.uiPanel = null; }
-  else { S.uiPanel = panelType; }
-  currentGardenBuilding = (panelType === 'garden') ? data : null;
-  currentTradeMerchant = (panelType === 'trade') ? data : null;
-  S.panelSubTab = 0;
-
-  const overlay = document.getElementById('overlay');
-  if (S.uiPanel) {
-    overlay.classList.add('show');
-    renderPanel();
-  } else {
-    overlay.classList.remove('show');
-  }
-}
-
-function renderPanel() {
-  const tabsEl = document.getElementById('panel-tabs');
-  const contentEl = document.getElementById('panel-content');
-
-  if (S.uiPanel === 'main') {
-    tabsEl.innerHTML = `
-      <button class="active" onclick="S.uiPanel='crafting';S.panelSubTab=0;renderPanel()">🔨 制作</button>
-      <button onclick="S.uiPanel='bestiary';renderPanel()">📖 图鉴</button>
-      <button onclick="S.uiPanel='building';renderPanel()">🏗️ 建筑</button>
-      <button onclick="S.uiPanel='garden';currentGardenBuilding=null;renderPanel()">🌱 菜园</button>
-    `;
-    contentEl.innerHTML = '<p style="text-align:center;color:#999;margin-top:20px">选择一个标签页开始</p>';
-  }
-  else if (S.uiPanel === 'crafting') {
-    tabsEl.innerHTML = '<button class="active">🔨 制作</button>';
-    let html = '<div class="recipe-grid">';
-    RECIPES.forEach(r => {
-      const can = canCraft(r);
-      const near = isNearStation(r.station);
-      const stationName = BUILDING_DB[r.station]?.name || r.station;
-      const inputStr = Object.entries(r.input).map(([k,v])=>`${v}${matIcon(k)}`).join('+');
-      const outStr = Object.entries(r.output).map(([k,v])=>`${v}${r.icon}`).join('');
-
-      let btnState = '';
-      if (!near) btnState = 'disabled';
-      else if (!can) btnState = 'disabled';
-
-      html += `<div class="recipe-card">
-        <div class="name">${r.icon} ${r.name}</div>
-        <div class="req">${inputStr} → ${outStr}</div>
-        <div class="req" style="color:#666;font-size:10px">需要靠近${stationName}</div>
-        <button ${btnState} onclick="doCraft('${r.id}')">${!near?'太远':!can?'不足':'制作'}</button>
-      </div>`;
-    });
-    html += '</div>';
-    if (!S.buildings.some(b => b.type === 'craft_table'))
-      html += '<p style="color:#ff6b6b;text-align:center;margin-top:8px">⚠️ 尚未建造工具台 — 在建筑菜单中建造</p>';
-    if (!S.buildings.some(b => b.type === 'furnace'))
-      html += '<p style="color:#ff6b6b;text-align:center;margin-top:4px">⚠️ 尚未建造熔炉 — 在建筑菜单中建造</p>';
-    contentEl.innerHTML = html;
-  }
-  else if (S.uiPanel === 'bestiary') {
-    tabsEl.innerHTML = '<button class="active">📖 奇异图鉴</button>';
-    let html = '<div class="bestiary-grid">';
-    for (const [id, entry] of Object.entries(BESTIARY_DB)) {
-      const discovered = S.discoveries.includes(id);
-      html += '<div class="bestiary-card' + (discovered ? '' : ' locked') + '">' +
-    (discovered ? '<div class="illu"><canvas width="64" height="64" id="best-' + id + '"></canvas></div>' : '<div class="illu"></div>') +
-    '<div class="ename">' + (discovered ? entry.name : '???') + '</div>' +
-    '<div class="flavor">' + (discovered ? entry.flavor : '尚未发现...') + '</div>' +
-  '</div>';
-    }
-    html += '</div>';
-    html += `<p style="color:#999;text-align:center;margin-top:12px;font-size:12px">已发现: ${S.discoveries.length}/${Object.keys(BESTIARY_DB).length}</p>`;
-    contentEl.innerHTML = html;
-  if(S.uiPanel==='bestiary'){for(const[id]of Object.entries(BESTIARY_DB)){if(S.discoveries.includes(id)){const bc=getBestiary(id);if(bc){const el=document.getElementById('best-'+id);if(el){const ectx=el.getContext('2d');ectx.clearRect(0,0,64,64);ectx.drawImage(bc,0,0);}}}}}
-  }
-  else if (S.uiPanel === 'building') {
-    tabsEl.innerHTML = '<button class="active">🏗️ 建筑</button>';
-    let html = '<div class="build-grid">';
-    for (const [id, def] of Object.entries(BUILDING_DB)) {
-      const can = canBuild(id);
-      const costStr = Object.entries(def.req).map(([k,v])=>`${v}${matIcon(k)}`).join('+');
-      html += `<div class="build-card">
-        <div class="name">${def.icon} ${def.name}</div>
-        <div class="desc">${def.desc}</div>
-        <div class="cost">需要: ${costStr}</div>
-        <button ${can?'':'disabled'} onclick="tryBuild('${id}');renderPanel()">${can?'建造':'材料不足'}</button>
-      </div>`;
-    }
-    html += '</div>';
-    html += '<p style="color:#999;text-align:center;margin-top:8px;font-size:11px">建筑会放置在你面朝方向。靠近已有建筑按⚡可升级。</p>';
-    contentEl.innerHTML = html;
-  }
-  else if (S.uiPanel === 'garden') {
-    tabsEl.innerHTML = '<button class="active">🌱 菜园</button>';
-    let html = '';
-    if (currentGardenBuilding) {
-      // Show specific garden's crops
-      const gardenCrops = S.crops.filter(c => c.gardenX === currentGardenBuilding.x && c.gardenY === currentGardenBuilding.y);
-      html += `<p style="color:#ffd700;margin-bottom:8px">菜园 (${gardenCrops.length}/4 地块)</p>`;
-      html += '<div class="garden-grid">';
-      gardenCrops.forEach((crop, i) => {
-        const def = CROP_DB[crop.type];
-        const ready = crop.growth >= 1;
-        html += `<div class="garden-card">
-          <div class="name">${def.icon} ${def.name}</div>
-          <div class="growth">${ready ? '✅ 可收获' : `生长中... ${Math.floor(crop.growth*100)}%`}</div>
-          ${ready ? `<button onclick="harvestCrop(${S.crops.indexOf(crop)});renderPanel()">收获</button>` : ''}
-        </div>`;
+// ==================== DIALOG SYSTEM ====================
+let dialogs = [];
+function showDialog(speaker,portrait,text,choices){
+  return new Promise(resolve=>{
+    const ov=document.getElementById('dialog_overlay');
+    const box=document.getElementById('dialog_box');
+    let html=`<div class="portrait">${portrait}</div>`;
+    html+=`<div class="speaker">${speaker}</div>`;
+    html+=`<div class="text">${text.replace(/\n/g,'<br>')}</div>`;
+    if(choices&&choices.length>0){
+      html+=`<div class="choices">`;
+      choices.forEach((c,i)=>{
+        const d=c.disabled?' disabled':'';
+        const t=c.disabled?`${c.text}<br><small style="color:#888">${c.disabledText||''}</small>`:c.text;
+        html+=`<button${d} onclick="GM.resolveDialog(${i})">${t}</button>`;
       });
-      html += '</div>';
-      // Plant new
-      if (gardenCrops.length < 4) {
-        html += '<p style="color:#ffd700;margin-top:12px">🌾 种植新作物：</p><div class="garden-grid">';
-        for (const [id, def] of Object.entries(CROP_DB)) {
-          const costs = { moonDew:{herb:2}, bubbleWheat:{herb:1,wood:1}, fireFungus:{herb:2,ironOre:1} };
-          const cost = costs[id];
-          const costStr = Object.entries(cost).map(([k,v])=>`${v}${matIcon(k)}`).join('+');
-          const canPlant = Object.entries(cost).every(([k,v])=>(S.inventory[k]||0)>=v);
-          html += `<div class="garden-card">
-            <div class="name">${def.icon} ${def.name}</div>
-            <div class="desc">${def.desc}</div>
-            <div class="growth">花费: ${costStr}</div>
-            <button ${canPlant?'':'disabled'} onclick="plantCrop(currentGardenBuilding,'${id}');renderPanel()">种植</button>
-          </div>`;
-        }
-        html += '</div>';
-      }
-    } else {
-      // List all gardens
-      const gardens = S.buildings.filter(b => b.type === 'garden');
-      if (gardens.length === 0) {
-        html += '<p style="color:#999;text-align:center;margin-top:20px">还没有菜园 — 在建筑菜单中建造一个吧！</p>';
-      } else {
-        html += '<p style="color:#ffd700;margin-bottom:8px">你的菜园：</p>';
-        gardens.forEach(g => {
-          const crops = S.crops.filter(c => c.gardenX === g.x && c.gardenY === g.y);
-          html += `<div class="build-card" style="margin-bottom:8px">
-            <div class="name">🌱 菜园 (${g.x},${g.y})</div>
-            <div class="desc">${crops.length}/4 地块 | 等级 Lv.${g.level}</div>
-            <button onclick="currentGardenBuilding={x:${g.x},y:${g.y},type:'garden',level:${g.level}};renderPanel()">管理菜园</button>
-          </div>`;
-        });
-      }
+      html+=`</div>`;
+    }else{
+      html+=`<div class="continue"><button onclick="GM.resolveDialog(-1)">继续 ▸</button></div>`;
     }
-    contentEl.innerHTML = html;
-  }
-  else if (S.uiPanel === 'trade') {
-    tabsEl.innerHTML = '<button class="active">🌌 虚空交易</button>';
-    let html = '<p style="color:#dda0dd;text-align:center;margin-bottom:8px">虚空商贩展示着它的货物...</p>';
-    html += `<p style="color:#999;text-align:center;font-size:12px">它想要: ${currentTradeMerchant?.wantAmt || '?'}个 ${matIcon(currentTradeMerchant?.wants||'wood')} (你有 ${S.inventory[currentTradeMerchant?.wants]||0})</p>`;
-    html += '<div class="trade-grid">';
-    if (currentTradeMerchant) {
-      for (const item of currentTradeMerchant.items) {
-        const price = currentTradeMerchant.prices[item] || 5;
-        const can = (S.inventory[currentTradeMerchant.wants] || 0) >= price;
-        html += `<div class="trade-card">
-          <div class="name">${matIcon(item)}</div>
-          <div class="cost">${price} ${matIcon(currentTradeMerchant.wants)}</div>
-          <button ${can?'':'disabled'} onclick="tradeWithVoid(currentTradeMerchant,'${item}');renderPanel()">${can?'交换':'不足'}</button>
-        </div>`;
-      }
-    }
-    html += '</div>';
-    html += '<p style="color:#666;text-align:center;margin-top:8px;font-size:10px">注意：交易后价格会变动。虚空商贩在学你的需求。</p>';
-    contentEl.innerHTML = html;
-  }
-}
-
-// ==================== 18. PLAYER UPDATE ====================
-function updatePlayer() {
-  let mx = 0, my = 0;
-  if (S.keys['ArrowUp'] || S.keys['w']) my = -1;
-  if (S.keys['ArrowDown'] || S.keys['s']) my = 1;
-  if (S.keys['ArrowLeft'] || S.keys['a']) mx = -1;
-  if (S.keys['ArrowRight'] || S.keys['d']) mx = 1;
-
-  if (mx !== 0 || my !== 0) {
-    const len = Math.sqrt(mx*mx + my*my);
-    mx /= len; my /= len;
-    S.player.vx = mx * S.player.speed;
-    S.player.vy = my * S.player.speed;
-    if (Math.abs(mx) > Math.abs(my)) S.player.facing = mx > 0 ? 1 : 3;
-    else S.player.facing = my > 0 ? 2 : 0;
-  } else {
-    S.player.vx *= 0.8; S.player.vy *= 0.8;
-    if (Math.abs(S.player.vx) < 0.1) S.player.vx = 0;
-    if (Math.abs(S.player.vy) < 0.1) S.player.vy = 0;
-  }
-
-  let nx = S.player.x + S.player.vx * 0.016;
-  let ny = S.player.y + S.player.vy * 0.016;
-
-  // Collision
-  const margin = 0.3;
-  const blocked = ['water','tree','rock','glitch'];
-  for (let dy = -1; dy <= 1; dy++)
-    for (let dx = -1; dx <= 1; dx++) {
-      const tx = Math.floor(nx + dx * margin), ty = Math.floor(ny + dy * margin);
-      if (tx < 0 || tx >= WORLD_W || ty < 0 || ty >= WORLD_H) continue;
-      const tile = S.worldData[ty][tx];
-      if (blocked.includes(tile.tile)) {
-        if (tile.harvested && (tile.tile === 'tree' || tile.tile === 'rock')) continue;
-        const cx = tx + 0.5, cy = ty + 0.5;
-        if (Math.abs(nx + dx * margin - cx) < 0.5 && Math.abs(ny + dy * margin - cy) < 0.5) {
-          const px = nx + dx * margin, py = ny + dy * margin;
-          if (Math.abs(px - cx) > Math.abs(py - cy)) nx = cx + Math.sign(px - cx) * 0.55;
-          else ny = cy + Math.sign(py - cy) * 0.55;
-        }
-      }
-    }
-
-  S.player.x = Math.max(0.5, Math.min(WORLD_W - 0.5, nx));
-  S.player.y = Math.max(0.5, Math.min(WORLD_H - 0.5, ny));
-
-  // Check glitch edge
-  if (S.player.x > 55) discoverBestiary('glitch');
-}
-
-// ==================== 19. GAME UPDATE ====================
-function updateTime() {
-  S.time += S.daySpeed * 0.016;
-  if (S.time >= 1440) { S.time = 360; showMsg('☀️ 新的一天开始了！', '#ffd700'); }
-}
-
-function updateCreatures() {
-  S.creatures.forEach(c => {
-    if (c.type === 'mirror_butterfly') {
-      c.phase += c.flapSpeed;
-      // Slowly drift
-      c.x += Math.sin(c.phase * 0.7) * 0.005;
-      c.y += Math.cos(c.phase * 0.5) * 0.005;
-    }
-    else if (c.type === 'crystal_snail') {
-      c.phase += 0.01;
-      c.x += c.speed * c.direction;
-      // Random direction changes
-      if (Math.random() < 0.005) c.direction *= -1;
-      // Charge during day, discharge at night
-      if (S.time > 360 && S.time < 900) c.charge = Math.min(1, c.charge + 0.0005);
-      else c.charge = Math.max(0, c.charge - 0.001);
-      // Bounds check
-      if (c.x < 26 || c.x > 34) c.direction *= -1;
-    }
-    else if (c.type === 'memory_jelly') {
-      c.phase += 0.015;
-      c.floatOffset += 0.02;
-      c.y += Math.sin(c.floatOffset) * 0.003;
-      c.x += Math.cos(c.floatOffset * 0.7) * 0.002;
-    }
-    else if (c.type === 'void_merchant') {
-      c.phase += 0.008;
-    }
-  });
-
-  // Void merchant timer
-  S.voidTraderTimer -= 0.016;
-  if (S.voidTraderTimer <= 0 && !S.creatures.some(c => c.type === 'void_merchant')) {
-    spawnVoidMerchant();
-    S.voidTraderTimer = 800 + Math.random() * 800;
-  }
-}
-
-function updateCrops() {
-  S.crops.forEach(crop => {
-    if (crop.growth >= 1) return; // Already mature
-    const def = CROP_DB[crop.type];
-    let growthRate = 0.00015; // Base growth per tick
-
-    // Night-only crops grow only at night (900-1440)
-    if (def.nightOnly && (S.time > 360 && S.time < 900)) growthRate = 0;
-
-    // Heat boost: faster near furnace
-    if (def.heatBoost) {
-      const nearFurnace = S.buildings.some(b =>
-        b.type === 'furnace' && Math.abs(b.x + 0.5 - crop.x) < 3 && Math.abs(b.y + 0.5 - crop.y) < 3);
-      if (nearFurnace) growthRate *= 3;
-    }
-
-    crop.growth = Math.min(1, crop.growth + growthRate);
+    box.innerHTML=html;
+    ov.classList.add('show');
+    dialogs.push({resolve,choices});
+    GS.animQueue.push('dialog');
   });
 }
-
-// ==================== 20. RENDERING ====================
-function drawTile(ctx, x, y, tile) {
-  const px = x * TILE, py = y * TILE;
-  ctx.imageSmoothingEnabled = false;
-  switch (tile.tile) {
-    case 'grass': {
-      ctx.fillStyle = [PAL.grass1,PAL.grass2,PAL.grass3][tile.variant%3];
-      ctx.fillRect(px, py, TILE, TILE);
-      ctx.fillStyle = PAL.grassBlade;
-      ctx.fillRect(px+2, py+6, 2, 4); ctx.fillRect(px+14, py+10, 2, 3);
-      ctx.fillRect(px+24, py+4, 1, 3); ctx.fillRect(px+8, py+18, 2, 4);
-      ctx.fillRect(px+20, py+22, 1, 3); ctx.fillRect(px+28, py+14, 2, 2);
-      ctx.fillStyle = PAL.grassDetail; ctx.fillRect(px, py+28, TILE, 4);
-      break;
-    }
-    case 'water': {
-      ctx.fillStyle = PAL.water1; ctx.fillRect(px, py, TILE, TILE);
-      ctx.fillStyle = PAL.waterDeep; ctx.fillRect(px, py+24, TILE, 8);
-      const wv1 = Math.sin((x+S.time*0.025)*0.6)*2.5;
-      const wv2 = Math.cos((y+S.time*0.02)*0.5)*2;
-      ctx.fillStyle = PAL.waterShimmer; ctx.fillRect(px, py+TILE/2+wv1, TILE, 5);
-      ctx.fillStyle = PAL.waterFoam; ctx.fillRect(px, py+TILE-6+wv2, TILE, 2);
-      ctx.fillStyle = 'rgba(180,220,240,0.12)'; ctx.fillRect(px, py, TILE, 1);
-      break;
-    }
-    case 'bridge': {
-      ctx.fillStyle = PAL.bridge1; ctx.fillRect(px, py, TILE+2, TILE);
-      for (let i = 0; i < 4; i++) {
-        ctx.fillStyle = i%2===0 ? PAL.bridge2 : PAL.bridge1;
-        ctx.fillRect(px+i*9, py, 5, TILE);
-      }
-      ctx.fillStyle = PAL.bridgeRail; ctx.fillRect(px, py+2, TILE, 3);
-      ctx.fillRect(px, py+TILE-5, TILE, 3);
-      ctx.fillStyle = PAL.bridge2;
-      ctx.fillRect(px+1, py, 2, TILE); ctx.fillRect(px+TILE-2, py, 2, TILE);
-      break;
-    }
-    case 'path': {
-      ctx.fillStyle = PAL.path1; ctx.fillRect(px, py, TILE, TILE);
-      ctx.fillStyle = PAL.path2; ctx.fillRect(px+4, py+6, 6, 4);
-      ctx.fillRect(px+18, py+16, 8, 4); ctx.fillRect(px+8, py+24, 10, 4);
-      ctx.fillStyle = PAL.pathEdge; ctx.fillRect(px, py, TILE, 1);
-      ctx.fillRect(px, py+TILE-1, TILE, 1);
-      break;
-    }
-    case 'tree': {
-      ctx.fillStyle = [PAL.grass1,PAL.grass2,PAL.grass3][tile.variant%3];
-      ctx.fillRect(px, py, TILE, TILE);
-      if (!tile.harvested) {
-        ctx.fillStyle = PAL.woodTrunk; ctx.fillRect(px+13, py+16, 6, 16);
-        ctx.fillStyle = PAL.woodBarkLight; ctx.fillRect(px+13, py+16, 2, 16);
-        ctx.fillStyle = PAL.leafDark; ctx.beginPath();
-        ctx.arc(px+16, py+10, 13, 0, Math.PI*2); ctx.fill();
-        ctx.fillStyle = PAL.leafMid; ctx.beginPath();
-        ctx.arc(px+16, py+8, 10, 0, Math.PI*2); ctx.fill();
-        ctx.fillStyle = PAL.leafLight; ctx.beginPath();
-        ctx.arc(px+14, py+6, 5, 0, Math.PI*2); ctx.fill();
-        ctx.beginPath(); ctx.arc(px+20, py+8, 4, 0, Math.PI*2); ctx.fill();
-        ctx.fillStyle = PAL.leafHighlight;
-        ctx.fillRect(px+10, py+2, 3, 2); ctx.fillRect(px+18, py+3, 2, 2);
-      } else { ctx.fillStyle = PAL.woodTrunk; ctx.fillRect(px+14, py+22, 4, 6); }
-      break;
-    }
-    case 'rock': {
-      ctx.fillStyle = [PAL.grass1,PAL.grass2,PAL.grass3][tile.variant%3];
-      ctx.fillRect(px, py, TILE, TILE);
-      if (!tile.harvested) {
-        const base = tile.ironOre ? PAL.ironRock : PAL.rockBase;
-        const hi = tile.ironOre ? PAL.ironHighlight : PAL.rockHighlight;
-        const lo = tile.ironOre ? '#8a5a4a' : PAL.rockShadow;
-        ctx.fillStyle = base; ctx.beginPath();
-        ctx.moveTo(px+5, py+28); ctx.lineTo(px+8, py+8); ctx.lineTo(px+18, py+4);
-        ctx.lineTo(px+24, py+10); ctx.lineTo(px+28, py+18); ctx.lineTo(px+22, py+28);
-        ctx.closePath(); ctx.fill();
-        ctx.fillStyle = hi; ctx.beginPath();
-        ctx.moveTo(px+9, py+12); ctx.lineTo(px+18, py+5); ctx.lineTo(px+23, py+12); ctx.closePath(); ctx.fill();
-        ctx.fillStyle = lo; ctx.beginPath();
-        ctx.moveTo(px+23, py+12); ctx.lineTo(px+28, py+18); ctx.lineTo(px+22, py+28);
-        ctx.lineTo(px+18, py+26); ctx.closePath(); ctx.fill();
-        ctx.strokeStyle = 'rgba(0,0,0,0.25)'; ctx.lineWidth = 0.5;
-        ctx.beginPath(); ctx.moveTo(px+13, py+8); ctx.lineTo(px+17, py+16); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(px+24, py+15); ctx.lineTo(px+22, py+22); ctx.stroke();
-        if (tile.ironOre) {
-          ctx.fillStyle = PAL.ironOreRed; ctx.beginPath();
-          ctx.arc(px+16, py+14, 3.5, 0, Math.PI*2); ctx.fill();
-          ctx.fillStyle = 'rgba(255,180,100,0.4)'; ctx.beginPath();
-          ctx.arc(px+15, py+13, 1.5, 0, Math.PI*2); ctx.fill();
-        }
-      }
-      break;
-    }
-    case 'berry': {
-      ctx.fillStyle = [PAL.grass1,PAL.grass2,PAL.grass3][tile.variant%3];
-      ctx.fillRect(px, py, TILE, TILE);
-      ctx.fillStyle = '#4a6a2f'; ctx.fillRect(px+12, py+14, 8, 20);
-      ctx.fillStyle = '#5a7a3f'; ctx.fillRect(px+12, py+14, 3, 20);
-      if (!tile.harvested) {
-        ctx.fillStyle = PAL.berryRedDark; ctx.beginPath();
-        ctx.arc(px+15, py+14, 5, 0, Math.PI*2); ctx.fill();
-        ctx.fillStyle = PAL.berryRed; ctx.beginPath();
-        ctx.arc(px+19, py+16, 4.5, 0, Math.PI*2); ctx.fill();
-        ctx.fillStyle = PAL.berryRedDark; ctx.beginPath();
-        ctx.arc(px+11, py+18, 4, 0, Math.PI*2); ctx.fill();
-        ctx.fillStyle = PAL.berryRedLight;
-        ctx.beginPath(); ctx.arc(px+14, py+13, 1.5, 0, Math.PI*2); ctx.fill();
-        ctx.beginPath(); ctx.arc(px+18, py+15, 1.5, 0, Math.PI*2); ctx.fill();
-        ctx.beginPath(); ctx.arc(px+10, py+17, 1, 0, Math.PI*2); ctx.fill();
-      }
-      break;
-    }
-    case 'float_rock': {
-      ctx.fillStyle = [PAL.grass1,PAL.grass2,PAL.grass3][tile.variant%3];
-      ctx.fillRect(px, py, TILE, TILE);
-      if (!tile.harvested) {
-        const floatY = Math.sin(S.time*0.03+tile.offset)*7;
-        ctx.fillStyle = 'rgba(0,0,0,0.12)'; ctx.beginPath();
-        ctx.ellipse(px+16, py+28, 12, 3, 0, 0, Math.PI*2); ctx.fill();
-        ctx.fillStyle = PAL.starRock; ctx.beginPath();
-        ctx.moveTo(px+10, py+22+floatY); ctx.lineTo(px+4, py+8+floatY);
-        ctx.lineTo(px+16, py+2+floatY); ctx.lineTo(px+26, py+8+floatY);
-        ctx.lineTo(px+24, py+22+floatY); ctx.closePath(); ctx.fill();
-        ctx.fillStyle = PAL.starHighlight; ctx.beginPath();
-        ctx.moveTo(px+10, py+12+floatY); ctx.lineTo(px+16, py+4+floatY);
-        ctx.lineTo(px+24, py+12+floatY); ctx.closePath(); ctx.fill();
-        ctx.strokeStyle = PAL.starGlow; ctx.lineWidth = 1.5;
-        ctx.beginPath(); ctx.arc(px+16, py+13+floatY, 14, 0, Math.PI*2); ctx.stroke();
-        const sx2 = px+16, sy2 = py+13+floatY;
-        ctx.fillStyle = 'rgba(255,200,230,0.7)'; ctx.fillRect(sx2-5, sy2-6, 1, 1);
-        ctx.fillStyle = 'rgba(255,180,220,0.5)'; ctx.fillRect(sx2+8, sy2-2, 1, 1);
-        ctx.fillRect(sx2-8, sy2+4, 1, 1);
-      }
-      break;
-    }
-    case 'walk_tree': {
-      ctx.fillStyle = [PAL.grass1,PAL.grass2,PAL.grass3][tile.variant%3];
-      ctx.fillRect(px, py, TILE, TILE);
-      if (!tile.harvested) {
-        const moveX = Math.sin(S.time*0.015+tile.phase)*4;
-        ctx.fillStyle = '#5a30a0';
-        ctx.fillRect(px+10+moveX, py+28, 4, 5); ctx.fillRect(px+18+moveX, py+27, 4, 6);
-        ctx.fillStyle = PAL.walkTreeTrunk; ctx.fillRect(px+12+moveX, py+14, 8, 18);
-        ctx.fillStyle = '#7b50b0'; ctx.fillRect(px+12+moveX, py+14, 3, 18);
-        ctx.fillStyle = PAL.walkTreeLeaf; ctx.beginPath();
-        ctx.arc(px+16+moveX, py+8, 14, 0, Math.PI*2); ctx.fill();
-        ctx.fillStyle = PAL.walkTreeHighlight; ctx.beginPath();
-        ctx.arc(px+16+moveX, py+6, 9, 0, Math.PI*2); ctx.fill();
-        ctx.fillStyle = '#3a1060'; ctx.fillRect(px+12+moveX, py+10, 3, 4);
-        ctx.fillRect(px+18+moveX, py+10, 3, 4);
-        ctx.fillStyle = '#ffcc00'; ctx.fillRect(px+13+moveX, py+11, 1, 1);
-        ctx.fillRect(px+19+moveX, py+11, 1, 1);
-        ctx.fillStyle = 'rgba(180,150,210,0.2)'; ctx.fillRect(px+6, py+30, 8, 2);
-        ctx.fillRect(px+24, py+30, 5, 2);
-      }
-      break;
-    }
-    case 'glitch': {
-      const gx = Math.floor(Math.random()*4);
-      ctx.fillStyle = [PAL.glitch1,PAL.glitch2,PAL.glitch3,PAL.glitch4][gx];
-      ctx.fillRect(px, py, TILE/2, TILE/2);
-      ctx.fillStyle = [PAL.glitch3,PAL.glitch4,PAL.glitch1,PAL.glitch2][gx];
-      ctx.fillRect(px+TILE/2, py+TILE/2, TILE/2, TILE/2);
-      ctx.fillStyle = '#000';
-      ctx.fillRect(px+TILE/2, py, TILE/2, TILE/2);
-      ctx.fillRect(px, py+TILE/2, TILE/2, TILE/2);
-      ctx.fillStyle = 'rgba(0,0,0,0.2)';
-      ctx.fillRect(px, py+8, TILE, 1); ctx.fillRect(px, py+20, TILE, 1);
-      ctx.fillStyle = '#ff0'; ctx.fillRect(px+20, py+6, 3, 3);
-      ctx.fillStyle = 'rgba(255,255,0,0.4)'; ctx.fillRect(px+17, py+3, 3, 3);
-      break;
-    }
-  }
+function announce(text,dur=2500){
+  const el=document.getElementById('announce');
+  el.textContent=text;el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'),dur);
 }
 
-function drawPlayer(ctx, camX, camY) {
-  const sx = S.player.x * TILE - camX, sy = S.player.y * TILE - camY;
-  ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.beginPath();
-  ctx.ellipse(sx+TILE/2, sy+TILE, 9, 3, 0, 0, Math.PI*2); ctx.fill();
-  ctx.fillStyle = PAL.clothBlue; ctx.fillRect(sx+8, sy+10, 16, 15);
-  ctx.fillStyle = PAL.clothBlueDark; ctx.fillRect(sx+8, sy+22, 16, 3);
-  ctx.fillStyle = PAL.skin; ctx.fillRect(sx+9, sy+2, 14, 12);
-  ctx.fillStyle = PAL.skinShadow; ctx.fillRect(sx+9, sy+12, 14, 2);
-  ctx.fillStyle = PAL.hairBrown; ctx.fillRect(sx+7, sy+1, 18, 7);
-  ctx.fillStyle = PAL.hairBrownLight; ctx.fillRect(sx+9, sy, 14, 3);
-  ctx.fillStyle = '#4a3020'; ctx.fillRect(sx+9, sy+25, 6, 7); ctx.fillRect(sx+17, sy+25, 6, 7);
-  ctx.fillStyle = '#3a2010'; ctx.fillRect(sx+8, sy+30, 7, 3); ctx.fillRect(sx+17, sy+30, 7, 3);
-  const eyeOffX = [0,2,0,-2][S.player.facing];
-  ctx.fillStyle = '#fff'; ctx.fillRect(sx+11+eyeOffX, sy+6, 3, 2); ctx.fillRect(sx+18+eyeOffX, sy+6, 3, 2);
-  ctx.fillStyle = '#111'; ctx.fillRect(sx+12+eyeOffX, sy+6, 1, 2); ctx.fillRect(sx+19+eyeOffX, sy+6, 1, 2);
-  ctx.fillStyle = PAL.skin;
-  ctx.fillRect(sx+4, sy+10, 4, 9); ctx.fillRect(sx+24, sy+10, 4, 9);
-}}
+// ==================== GAME MANAGER ====================
+const GM = {
+  resolveDialog(idx){
+    const d=dialogs.pop();
+    document.getElementById('dialog_overlay').classList.remove('show');
+    GS.animQueue=GS.animQueue.filter(a=>a!=='dialog');
+    if(d)d.resolve(idx);
+  },
+  switchMode(m){
+    GS.mode=m;
+    document.getElementById('btn_home').classList.toggle('active',m==='home');
+    document.getElementById('btn_expedition').classList.toggle('active',m==='expedition');
+    R.draw();
+  },
+  openBestiary(){
+    let html='<div style="padding:12px"><h3 style="color:var(--gold);margin-bottom:8px">📖 奇异图鉴</h3>';
+    if(GS.discoveries.length===0){
+      html+='<p style="color:#888">还没有发现任何奇异事物...<br>去远征吧！</p>';
+    }else{
+      GS.discoveries.forEach(d=>{
+        html+=`<div style="background:rgba(200,164,92,.08);padding:8px;margin-bottom:6px;border-radius:4px;border-left:3px solid var(--gold)">${d}</div>`;
+      });
+    }
+    html+=`<div class="continue"><button onclick="this.closest('#dialog_overlay').classList.remove('show')">关闭</button></div>`;
+    document.getElementById('dialog_box').innerHTML=html;
+    document.getElementById('dialog_overlay').classList.add('show');
+  },
+  openJournal(){
+    let html='<div style="padding:12px"><h3 style="color:var(--gold);margin-bottom:8px">📜 冒险日志</h3>';
+    if(GS.journal.length===0){
+      html+='<p style="color:#888">还没有记录...<br>经历的事情会记录在这里。</p>';
+    }else{
+      GS.journal.forEach(j=>{
+        html+=`<div style="background:rgba(200,164,92,.08);padding:8px;margin-bottom:6px;border-radius:4px;font-size:13px;line-height:1.6">📝 ${j}</div>`;
+      });
+    }
+    html+=`<div class="continue"><button onclick="this.closest('#dialog_overlay').classList.remove('show')">关闭</button></div>`;
+    document.getElementById('dialog_box').innerHTML=html;
+    document.getElementById('dialog_overlay').classList.add('show');
+  },
+  addJournal(entry){if(!GS.journal.includes(entry))GS.journal.push(entry);},
+  addDiscovery(entry){if(!GS.discoveries.includes(entry)){GS.discoveries.push(entry);announce('🔍 新发现！');}},
+  addTrait(trait){if(!GS.traits.includes(trait)){GS.traits.push(trait);announce('🌿 获得新特性！');}},
+  updateUI(){
+    document.getElementById('r_wood').textContent=GS.resources.wood;
+    document.getElementById('r_stone').textContent=GS.resources.stone;
+    document.getElementById('r_star').textContent=GS.resources.starshard;
+    document.getElementById('r_herb').textContent=GS.resources.herb;
+    const tod={morning:'☀️',day:'☀️',dusk:'🌅',night:'🌙'};
+    document.getElementById('time_icon').textContent=tod[GS.timeOfDay]||'☀️';
+    document.getElementById('time_text').textContent=`第${GS.day}天`;
+    document.getElementById('chapter_name').textContent=CHAPTERS[GS.chapter]?.name||'???';
+  },
+  addResources(r){for(const[k,v]of Object.entries(r)){GS.resources[k]=(GS.resources[k]||0)+v;}},
+  async startExpedition(directionId){
+    const exp=CHAPTERS[GS.chapter]?.expeditions?.find(e=>e.id===directionId);
+    if(!exp)return;
+    GS.expedition={active:true,direction:directionId,currentNode:0,nodes:exp.nodes,pathIndex:0,completed:[]};
+    GS.mode='expedition';
+    document.getElementById('btn_home').classList.remove('active');
+    document.getElementById('btn_expedition').classList.add('active');
+    R.draw();
+    await GM.delay(800);
+    await GM.advanceExpedition();
+  },
+  async advanceExpedition(){
+    const exp=GS.expedition;
+    if(!exp.active)return;
+    const node=exp.nodes[exp.currentNode];
+    if(!node)return;
+    if(node.type==='return'){
+      await GM.finishExpedition();
+      return;
+    }
+    // Animate to node
+    exp.currentNode++;
+    R.draw();
+    await GM.delay(600);
+    if(node.type==='event'&&node.event){
+      await GM.triggerEvent(node.event);
+    }
+    if(exp.currentNode>=exp.nodes.length||exp.nodes[exp.currentNode]?.type==='return'){
+      await GM.delay(300);
+      await GM.finishExpedition();
+    }
+  },
+  async triggerEvent(eventId){
+    const ev=EVENTS[eventId];
+    if(!ev)return;
+    const idx=await showDialog(ev.title,'❓',ev.text,ev.choices);
+    if(idx>=0&&ev.choices[idx]){
+      const c=ev.choices[idx];
+      await showDialog('',c.action==='collect_risky'?'⚡':c.action==='bypass'?'🚶':c.action==='observe'?'🔍':c.action==='grab'?'🏃':c.action==='confront'?'💬':c.action==='gentle'?'🤝':c.action==='retreat'?'🚶':'🧍','',[{text:c.result}]);
+      // Apply results
+      if(c.action==='collect_risky'){GM.addResources({starshard:2,stone:1});GM.addDiscovery('浮游岩群 — 会呼吸的石头，似乎有记忆');}
+      if(c.action==='observe'){GM.addDiscovery('浮游岩群 — 内部有发光脉络，会记住触碰者');}
+      if(c.action==='grab'){GM.addResources({herb:3});}
+      if(c.action==='confront'){GM.addResources({herb:1});GM.addTrait('耳语者');GM.addJournal('有一个无形的声音在浆果丛里说话——只有我能听到。它提到了"那些不会听的人"。');}
+      if(c.action==='gentle'){GM.addResources({herb:2});GM.addJournal('浆果丛的声音警告我：漫步树在躲避什么东西。');}
+      if(c.action==='retreat'){GM.addResources({wood:1});GM.addDiscovery('漫步树 — 会移动的巨树，有眼睛一样的空洞。它在躲避什么？');}
+      if(c.action==='stay'){GM.addResources({wood:1});GM.addDiscovery('漫步树 — 触碰了我的肩膀后离开。树液在皮肤上发凉。');GM.addJournal('一棵漫步树用树枝碰了我的肩膀。它不像害怕——更像是确认了某件事。');}
+    }
+  },
+  async finishExpedition(){
+    const exp=GS.expedition;
+    const expData=CHAPTERS[GS.chapter]?.expeditions?.find(e=>e.id===exp.direction);
+    if(expData?.rewards)GM.addResources(expData.rewards);
+    if(expData?.storyRewards)expData.storyRewards.forEach(s=>GM.addJournal(s));
+    GS.expedition={active:false,direction:null,currentNode:0,nodes:[],pathIndex:0,completed:GS.expedition.completed};
+    GS.flags.firstExpedition=true;
+    GS.timeOfDay='dusk';
+    GM.mode='home';
+    document.getElementById('btn_home').classList.add('active');
+    document.getElementById('btn_expedition').classList.remove('active');
+    R.draw();
+    announce('🏠 远征归来！');
+    await GM.delay(1500);
+    // Trigger post-expedition events
+    if(!GS.flags.firstNight)await GM.triggerNightfall();
+  },
+  async triggerNightfall(){
+    GS.flags.firstNight=true;
+    GS.timeOfDay='night';
+    GS.buildings.push('garden_bed'); // 月露草床自动出现
+    GM.updateUI();R.draw();
+    await showDialog('夜幕降临','🌙',`天黑了下来。
 
-function drawNPC(ctx, npc, camX, camY) {
-  const sx = npc.x * TILE - camX, sy = npc.y * TILE - camY;
-  ctx.fillStyle = 'rgba(0,0,0,0.2)'; ctx.beginPath();
-  ctx.ellipse(sx+TILE/2, sy+TILE, 8, 3, 0, 0, Math.PI*2); ctx.fill();
-  ctx.fillStyle = PAL.clothGreen; ctx.fillRect(sx+8, sy+10, 16, 14);
-  ctx.fillStyle = PAL.clothGreenDark; ctx.fillRect(sx+8, sy+22, 16, 3);
-  ctx.fillStyle = '#f4d89a'; ctx.fillRect(sx+10, sy+2, 12, 10);
-  ctx.fillStyle = '#c0c0d0'; ctx.fillRect(sx+9, sy+1, 14, 7);
-  ctx.fillStyle = '#d8d8e8'; ctx.fillRect(sx+10, sy, 12, 3);
-  ctx.fillStyle = '#c0c0d0'; ctx.fillRect(sx+6, sy+3, 3, 5); ctx.fillRect(sx+23, sy+3, 3, 5);
-  ctx.fillStyle = '#f4d89a'; ctx.fillRect(sx+7, sy+3, 2, 3); ctx.fillRect(sx+23, sy+3, 2, 3);
-  ctx.fillStyle = '#3a2a1a'; ctx.fillRect(sx+10, sy+24, 5, 7); ctx.fillRect(sx+17, sy+24, 5, 7);
-  ctx.fillStyle = '#2a5a2a'; ctx.fillRect(sx+12, sy+6, 3, 2); ctx.fillRect(sx+18, sy+6, 3, 2);
-  ctx.fillStyle = '#f4d89a'; ctx.fillRect(sx+5, sy+10, 3, 7); ctx.fillRect(sx+24, sy+10, 3, 7);
-}}
+但领地的角落有什么东西在发光——
 
-function drawBuilding(ctx, b, camX, camY) {
-  const sx = b.x * TILE - camX, sy = b.y * TILE - camY;
-  ctx.imageSmoothingEnabled = false;
-  const lv = b.level || 1;
-  if(b.type==='hut'){
-    const roofH=-5-lv*2;
-    ctx.fillStyle='#c4956a';ctx.fillRect(sx+3,sy+8,26,24);
-    ctx.strokeStyle='#8B6914';ctx.lineWidth=1;ctx.strokeRect(sx+3,sy+8,26,24);
-    ctx.strokeStyle='#6b5030';ctx.lineWidth=1;
-    if(lv>=3){ctx.strokeRect(sx+6,sy+11,20,18);ctx.strokeRect(sx+9,sy+14,14,12);}
-    const rc=lv>=5?['#d4453a','#e05040']:lv>=3?['#c04030','#d4453a']:['#a03525','#c04030'];
-    ctx.fillStyle=rc[0];ctx.beginPath();
-    ctx.moveTo(sx,sy+8);ctx.lineTo(sx+16,sy+roofH);ctx.lineTo(sx+32,sy+8);ctx.closePath();ctx.fill();
-    ctx.fillStyle=rc[1];ctx.beginPath();
-    ctx.moveTo(sx+4,sy+8);ctx.lineTo(sx+16,sy+roofH+4);ctx.lineTo(sx+28,sy+8);ctx.closePath();ctx.fill();
-    ctx.fillStyle='#6a5a4a';ctx.fillRect(sx+22,sy+roofH+2,5,10);
-    if(lv>=4){ctx.fillStyle='#8a7a6a';ctx.fillRect(sx+23,sy+roofH+2,3,10);}
-    if(lv>=3){ctx.fillStyle='rgba(200,200,200,0.3)';ctx.beginPath();ctx.arc(sx+24,sy+roofH-3,2,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.arc(sx+26,sy+roofH-8,3,0,Math.PI*2);ctx.fill();}
-    ctx.fillStyle='#5a3020';ctx.fillRect(sx+11,sy+18,10,14);
-    ctx.fillStyle='#ffd700';ctx.fillRect(sx+14,sy+24,2,2);
-    ctx.fillStyle='#aaddff';ctx.fillRect(sx+5,sy+11,7,8);ctx.fillRect(sx+20,sy+11,7,8);
-    ctx.strokeStyle='#5a3020';ctx.lineWidth=1;ctx.strokeRect(sx+5,sy+11,7,8);ctx.strokeRect(sx+20,sy+11,7,8);
-    if(lv>=4){ctx.fillStyle=PAL.goldYellow;ctx.fillRect(sx+3,sy+6,26,2);ctx.fillRect(sx+14,sy+roofH-4,4,2);}
-  }else if(b.type==='craft_table'){
-    ctx.fillStyle='rgba(0,0,0,0.15)';ctx.fillRect(sx+2,sy+28,28,4);
-    if(lv<=2){ctx.fillStyle='#8a7a6a';ctx.fillRect(sx+3,sy+14,26,16);ctx.fillStyle='#9a8a7a';ctx.fillRect(sx+3,sy+14,26,3);ctx.strokeStyle='#5a4a3a';ctx.lineWidth=1;ctx.strokeRect(sx+3,sy+14,26,16);ctx.fillStyle='#666';ctx.fillRect(sx+6,sy+12,3,10);ctx.fillStyle='#999';ctx.fillRect(sx+12,sy+12,3,8);}
-    else if(lv<=4){ctx.fillStyle='#8B6914';ctx.fillRect(sx+3,sy+12,26,18);ctx.strokeStyle='#5a4020';ctx.lineWidth=2;ctx.strokeRect(sx+3,sy+12,26,18);ctx.fillStyle='#a08060';ctx.fillRect(sx+1,sy+8,30,6);ctx.fillStyle='#666';ctx.fillRect(sx+8,sy+10,3,12);ctx.fillStyle='#999';ctx.fillRect(sx+14,sy+10,3,8);ctx.fillStyle='#ffd700';ctx.fillRect(sx+20,sy+10,4,12);ctx.fillStyle='#666';ctx.fillRect(sx+22,sy+16,6,3);}
-    else{ctx.fillStyle='#6a5a4a';ctx.fillRect(sx+2,sy+10,28,20);ctx.fillStyle='#8a7a6a';ctx.fillRect(sx+2,sy+10,28,4);ctx.strokeStyle='#4a3a2a';ctx.lineWidth=1;ctx.strokeRect(sx+2,sy+10,28,20);ctx.fillStyle='#c8a040';ctx.fillRect(sx+4,sy+8,24,4);ctx.fillStyle='#e8c860';ctx.fillRect(sx+6,sy+8,20,1);ctx.fillStyle='#999';ctx.fillRect(sx+10,sy+11,2,10);ctx.fillStyle='#aabbcc';ctx.fillRect(sx+16,sy+11,3,10);ctx.fillStyle='#c8a040';ctx.fillRect(sx+22,sy+11,4,10);ctx.strokeStyle='#ccc';ctx.lineWidth=1;ctx.beginPath();ctx.arc(sx+26,sy+6,4,0,Math.PI*2);ctx.stroke();}
-  }else if(b.type==='furnace'){
-    ctx.fillStyle='rgba(0,0,0,0.15)';ctx.fillRect(sx+4,sy+28,24,4);
-    if(lv<=2){ctx.fillStyle='#8a6a5a';ctx.fillRect(sx+5,sy+10,22,22);ctx.strokeStyle='#5a3a2a';ctx.lineWidth=2;ctx.strokeRect(sx+5,sy+10,22,22);ctx.fillStyle='#6a4a3a';ctx.beginPath();ctx.arc(sx+16,sy+20,6,0,Math.PI*2);ctx.fill();ctx.fillStyle='#000';ctx.beginPath();ctx.arc(sx+16,sy+20,3.5,0,Math.PI*2);ctx.fill();}
-    else if(lv<=4){ctx.fillStyle='#6a6a6a';ctx.fillRect(sx+4,sy+8,24,24);ctx.strokeStyle='#444';ctx.lineWidth=2;ctx.strokeRect(sx+4,sy+8,24,24);ctx.fillStyle='#8a8a8a';ctx.fillRect(sx+4,sy+6,24,4);ctx.fillStyle='#444';ctx.fillRect(sx+7,sy+10,18,8);}
-    else{ctx.fillStyle='#4a4a5a';ctx.fillRect(sx+3,sy+6,26,26);ctx.strokeStyle='#2a2a3a';ctx.lineWidth=2;ctx.strokeRect(sx+3,sy+6,26,26);ctx.fillStyle='#6a6a7a';ctx.fillRect(sx+3,sy+4,26,4);ctx.fillStyle='#3a3a4a';ctx.fillRect(sx+6,sy+8,20,8);ctx.fillStyle='#888';ctx.fillRect(sx+3,sy+10,3,6);ctx.fillRect(sx+26,sy+12,3,6);}
-    const fa=0.45+Math.sin(S.time*0.12)*0.3;
-    const fg=ctx.createLinearGradient(sx+16,sy+18,sx+16,sy+28);
-    fg.addColorStop(0,'rgba(255,120,30,'+(fa+0.35)+')');
-    fg.addColorStop(0.6,'rgba(255,200,50,'+fa+')');
-    fg.addColorStop(1,'rgba(255,60,10,'+(fa*0.4)+')');
-    ctx.fillStyle=fg;ctx.fillRect(sx+8,sy+18,16,12);
-    if(lv>=3){ctx.fillStyle='rgba(255,200,50,0.6)';ctx.fillRect(sx+12,sy+16,2,2);ctx.fillRect(sx+20,sy+17,1,1);}
-  }else if(b.type==='storage'){
-    const hh=16+lv*3;
-    if(lv<=2){ctx.fillStyle='#8B6914';ctx.fillRect(sx+3,sy+12,26,hh);ctx.strokeStyle='#5a4020';ctx.lineWidth=2;ctx.strokeRect(sx+3,sy+12,26,hh);ctx.fillStyle='#a08060';ctx.fillRect(sx+1,sy+8,30,6);ctx.fillStyle='#6a4a2a';ctx.fillRect(sx+8,sy+18,16,2);}
-    else if(lv<=4){ctx.fillStyle='#7a7a7a';ctx.fillRect(sx+4,sy+8,24,hh);ctx.strokeStyle='#5a5a5a';ctx.lineWidth=2;ctx.strokeRect(sx+4,sy+8,24,hh);ctx.fillStyle='#9a9a9a';ctx.fillRect(sx+2,sy+6,28,6);ctx.fillStyle='#c8a040';ctx.fillRect(sx+10,sy+16,12,2);}
-    else{ctx.fillStyle='#5a4a3a';ctx.fillRect(sx+3,sy+6,26,hh+4);ctx.strokeStyle='#3a2a1a';ctx.lineWidth=2;ctx.strokeRect(sx+3,sy+6,26,hh+4);ctx.fillStyle='#8a7a6a';ctx.fillRect(sx+1,sy+4,30,6);ctx.fillStyle='#c8a040';ctx.fillRect(sx+10,sy+14,12,3);ctx.fillStyle='#e8c860';ctx.fillRect(sx+10,sy+14,12,1);ctx.fillStyle='#ffd700';ctx.fillRect(sx+14,sy+20,4,4);ctx.fillStyle='#000';ctx.fillRect(sx+15,sy+22,2,1);}
-  }else if(b.type==='garden'){
-    ctx.fillStyle=PAL.soilDark;ctx.fillRect(sx+1,sy+8,30,24);
-    ctx.strokeStyle=PAL.soilLight;ctx.lineWidth=1;ctx.strokeRect(sx+1,sy+8,30,24);
-    ctx.strokeStyle=PAL.soilWet;ctx.lineWidth=1;
-    ctx.beginPath();ctx.moveTo(sx+16,sy+8);ctx.lineTo(sx+16,sy+32);ctx.stroke();
-    ctx.beginPath();ctx.moveTo(sx+1,sy+20);ctx.lineTo(sx+31,sy+20);ctx.stroke();
-    if(lv<=2){ctx.fillStyle='#a08060';for(let i=0;i<3;i++){ctx.fillRect(sx+1,sy+5+i*12,4,4);ctx.fillRect(sx+27,sy+5+i*12,4,4);}}
-    else if(lv<=4){ctx.fillStyle='#c8a880';for(let i=0;i<4;i++){ctx.fillRect(sx+1,sy+4+i*8,4,3);ctx.fillRect(sx+27,sy+4+i*8,4,3);}ctx.fillStyle='#7a8a9a';ctx.fillRect(sx+24,sy+2,6,6);ctx.fillStyle='#aabbcc';ctx.fillRect(sx+24,sy+2,3,6);}
-    else{ctx.strokeStyle='rgba(200,230,255,0.4)';ctx.lineWidth=1;ctx.strokeRect(sx+3,sy-2,26,34);ctx.strokeStyle='rgba(200,230,255,0.2)';ctx.beginPath();ctx.moveTo(sx+3,sy+12);ctx.lineTo(sx+29,sy+12);ctx.stroke();ctx.beginPath();ctx.moveTo(sx+3,sy+24);ctx.lineTo(sx+29,sy+24);ctx.stroke();ctx.beginPath();ctx.moveTo(sx+16,sy-4);ctx.lineTo(sx+16,sy+30);ctx.stroke();ctx.fillStyle='rgba(200,230,255,0.15)';ctx.beginPath();ctx.moveTo(sx,sy-2);ctx.lineTo(sx+16,sy-12);ctx.lineTo(sx+32,sy-2);ctx.fill();}
-  }else if(b.type==='watchtower'){
-    const hh2=18+lv*5;
-    if(lv<=2){ctx.fillStyle='#8B6914';ctx.fillRect(sx+12,sy+28-hh2,8,hh2);ctx.fillStyle='#6B5335';ctx.fillRect(sx+14,sy+28-hh2,4,hh2);ctx.fillStyle='#a08060';ctx.fillRect(sx+4,sy+28-hh2-6,24,8);ctx.strokeStyle='#6B5335';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(sx+12,sy+22-hh2);ctx.lineTo(sx+20,sy+12-hh2);ctx.stroke();}
-    else if(lv<=4){ctx.fillStyle='#8a7a6a';ctx.fillRect(sx+10,sy+24-hh2,12,hh2);ctx.strokeStyle='#6a5a4a';ctx.lineWidth=1;ctx.strokeRect(sx+10,sy+24-hh2,12,hh2);ctx.fillStyle='#9a8a7a';ctx.fillRect(sx+8,sy+22-hh2-6,16,8);for(let i=0;i<3;i++)ctx.fillRect(sx+8+i*6,sy+16-hh2-6,4,4);ctx.fillStyle='#334';ctx.fillRect(sx+13,sy+20-hh2,6,8);}
-    else{ctx.fillStyle='#6a6a7a';ctx.fillRect(sx+11,sy+20-hh2,10,hh2);ctx.strokeStyle='#4a4a5a';ctx.lineWidth=1;ctx.strokeRect(sx+11,sy+20-hh2,10,hh2);ctx.fillStyle='#5a5a6a';ctx.beginPath();ctx.arc(sx+16,sy+18-hh2-4,12,Math.PI,0);ctx.fill();ctx.strokeStyle='#888';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(sx+16,sy+16-hh2-4);ctx.lineTo(sx+24,sy+4-hh2-4);ctx.stroke();ctx.fillStyle='#ffd700';ctx.beginPath();ctx.arc(sx+24,sy+4-hh2-6,3,0,Math.PI*2);ctx.fill();}
-  }else if(b.type==='portal'){
-    if(lv<=2){ctx.fillStyle='#7a7a7a';ctx.fillRect(sx+2,sy+8,28,4);ctx.fillStyle='#9a9a9a';ctx.fillRect(sx+2,sy+8,28,2);ctx.fillStyle='#7a7a7a';ctx.fillRect(sx+2,sy+28,28,4);ctx.fillRect(sx+2,sy+8,4,24);ctx.fillRect(sx+26,sy+8,4,24);}
-    else if(lv<=4){ctx.fillStyle='#b8a0c8';ctx.fillRect(sx+1,sy+6,30,5);ctx.fillRect(sx+1,sy+27,30,5);ctx.fillRect(sx+1,sy+6,5,26);ctx.fillRect(sx+26,sy+6,5,26);ctx.fillStyle='#d8c0e8';ctx.fillRect(sx+1,sy+6,30,2);}
-    else{ctx.fillStyle='#6a6a8a';ctx.fillRect(sx,sy+5,32,6);ctx.fillRect(sx,sy+27,32,6);ctx.fillRect(sx,sy+5,6,28);ctx.fillRect(sx+26,sy+5,6,28);ctx.fillStyle='#aab8d0';ctx.fillRect(sx,sy+5,32,2);ctx.fillStyle='#ffd700';ctx.fillRect(sx+2,sy+7,4,4);ctx.fillRect(sx+26,sy+7,4,4);ctx.fillRect(sx+2,sy+25,4,4);ctx.fillRect(sx+26,sy+25,4,4);}
-    const ga=0.25+Math.sin(S.time*0.06)*0.18;
-    const ph=lv>=5?260:lv>=3?220:180;
-    ctx.fillStyle='hsla('+ph+',70%,60%,'+ga+')';
-    ctx.fillRect(sx+6,sy+12,20,16);
-    ctx.fillStyle='hsla('+(ph+20)+',80%,75%,'+(ga*0.6)+')';
-    ctx.fillRect(sx+8,sy+14,16,12);
-    if(lv>=4){ctx.fillStyle='rgba(200,180,255,0.5)';ctx.fillRect(sx+12,sy+16,2,4);ctx.fillRect(sx+18,sy+16,2,4);ctx.fillRect(sx+15,sy+14,3,2);ctx.fillRect(sx+15,sy+20,3,2);}
-  }
-}}
+一丛你从未见过的植物从泥土中钻了出来。纤细的茎，顶端是半透明的花苞，散发着柔和的蓝色荧光。
 
-function drawCreature(ctx, creature, camX, camY) {
-  const sx = creature.x * TILE - camX, sy = creature.y * TILE - camY;
-  ctx.imageSmoothingEnabled = false;
-  if(creature.type==='mirror_butterfly'){
-    for(let i=0;i<5;i++){
-      const bx=sx+Math.sin(creature.phase+i*1.6)*10;
-      const by=sy+Math.cos(creature.phase*0.7+i*1.3)*7-2;
-      const alpha=0.35+Math.sin(creature.phase*2.3+i)*0.25;
-      const flap=Math.sin(creature.phase*4+i)*0.4+0.6;
-      ctx.fillStyle='rgba(120,200,255,'+alpha+')';
-      ctx.fillRect(bx-3,by-1,Math.floor(3*flap),3);
-      ctx.fillRect(bx+1,by-1,Math.floor(3*flap),3);
-      ctx.fillStyle='rgba(180,230,255,'+(alpha+0.15)+')';
-      ctx.fillRect(bx-2,by-3,Math.floor(2*flap),2);
-      ctx.fillRect(bx+2,by-3,Math.floor(2*flap),2);
-      if(Math.sin(creature.phase*3.5+i)>0.7){
-        ctx.fillStyle='rgba(255,255,255,'+(alpha+0.25)+')';ctx.fillRect(bx,by-4,1,1);
+莉莉站在你旁边，声音很轻：
+
+"月露草。只有月光下才开。这里...以前没有这东西。"
+
+你低头看自己的手——指尖也在发出微弱的蓝光。\n\n和那些草一样的颜色。`);
+    if(!GS.flags.dreamHad)await GM.triggerDream();
+  },
+  async triggerDream(){
+    GS.flags.dreamHad=true;
+    GM.updateUI();R.draw();
+    announce('💤 你沉沉睡去...');
+    await GM.delay(1500);
+    await showDialog('???','👁️',`梦境。
+
+黑暗中有声音。不像说话——更像是某种韵律。像心跳，又像呼吸。
+
+然后你看到了文字。不是用眼睛看到——是直接出现在意识里：
+
+"第47个。欢迎。"
+
+"你不是来寻找答案的。你是答案。"
+
+"边缘在崩塌。快点。"
+
+你猛地惊醒。天已经亮了。\n\n但手心里写着两个字——在你醒来前你就写下的：\n\n"抬头看。"`);
+    GS.flags.firstChange=true;
+    GS.addTrait('蓝荧之触 — 指尖和月露草同步发光');
+    GS.addJournal('梦里有个声音说我是"第47个"。说"边缘在崩塌"。然后我的手自己写了"抬头看"。');
+    GS.day=2;GS.timeOfDay='morning';
+    GM.updateUI();R.draw();
+    await showDialog('莉莉','🧝‍♀️',`第二天早晨。
+
+莉莉看到你的手时，表情很复杂：
+
+"你的手...在发光？和月露草一样？"
+
+她咬了咬嘴唇。
+
+"前任领主也发生过类似的事。他在日记里写——'我的影子开始不按我的动作移动。'然后没多久他就..."
+
+她没说完。但你知道她想说什么。`);
+  },
+  delay(ms){return new Promise(r=>setTimeout(r,ms));},
+};
+
+// ==================== RENDERER ====================
+const R = {
+  draw(){
+    const c=document.getElementById('gc');
+    const p=c.parentElement;
+    c.width=p.clientWidth*2;c.height=p.clientHeight*2;
+    W=c.width;H=c.height;
+    const ctx=c.getContext('2d');
+    ctx.scale(2,2);
+    const w=W/2,h=H/2;
+    ctx.imageSmoothingEnabled=false;
+
+    if(GS.mode==='home')R.drawHome(ctx,w,h);
+    else R.drawExpedition(ctx,w,h);
+
+    R.drawParticles(ctx);
+  },
+  drawHome(ctx,w,h){
+    // Sky gradient
+    const todColors={
+      morning:['#6a8fa0','#8ab0c0'],
+      day:['#5a8ab0','#8ab8d0'],
+      dusk:['#c07050','#d09070'],
+      night:['#0a0a20','#1a1a40']
+    };
+    const sky=todColors[GS.timeOfDay]||todColors.day;
+    const skyGrad=ctx.createLinearGradient(0,0,0,h);
+    skyGrad.addColorStop(0,sky[0]);skyGrad.addColorStop(1,sky[1]);
+    ctx.fillStyle=skyGrad;ctx.fillRect(0,0,w,h);
+
+    // Ground
+    const gy=h*0.35;
+    ctx.fillStyle=PAL.grass[0];ctx.fillRect(0,gy,w,h-gy);
+    // Grass texture
+    for(let x=0;x<w;x+=12){
+      ctx.fillStyle=PAL.grass[(Math.floor(x/12)%3)];
+      ctx.fillRect(x,gy,12,h-gy);
+    }
+
+    // Territory floor
+    const cx=w/2,cy=h*0.6;
+    const gridSize=Math.min(w*0.15,64);
+    const gs=gridSize;
+    // 2x3 grid
+    for(let row=0;row<2;row++){
+      for(let col=0;col<3;col++){
+        const gx=cx+(col-1.5)*gs*1.2, gy2=cy+(row-0.5)*gs*1.2;
+        ctx.fillStyle='rgba(0,0,0,.15)';ctx.fillRect(gx,gy2,gs,gs);
+        ctx.strokeStyle='rgba(200,164,92,.2)';ctx.lineWidth=1;
+        ctx.strokeRect(gx,gy2,gs,gs);
       }
     }
-  }else if(creature.type==='crystal_snail'){
-    ctx.fillStyle='rgba(180,200,220,0.1)';ctx.fillRect(sx,sy+22,20,4);
-    ctx.fillStyle=PAL.snailBody;ctx.fillRect(sx+3,sy+12,16,8);
-    ctx.fillStyle=PAL.snailHighlight;ctx.fillRect(sx+3,sy+12,8,8);
-    ctx.fillStyle=PAL.snailHighlight;ctx.fillRect(sx+17,sy+10,7,7);
-    ctx.fillStyle=PAL.snailBody;ctx.fillRect(sx+20,sy+8,1,4);ctx.fillRect(sx+18,sy+7,1,4);
-    ctx.fillStyle=PAL.snailEye;ctx.fillRect(sx+19,sy+8,2,1);ctx.fillRect(sx+17,sy+7,2,1);
-    const ca=creature.charge||0;const isNight=S.time>900||S.time<360;
-    if(isNight&&ca>0){const gf=Math.sin(S.time*0.06+creature.phase)*0.25+0.6;
-      ctx.fillStyle='rgba(255,140,200,'+(ca*gf*0.7)+')';ctx.beginPath();ctx.arc(sx+8,sy+8,11,0,Math.PI*2);ctx.fill();}
-    const hue=isNight?ca*300:200;
-    ctx.fillStyle='hsl('+hue+',65%,'+(48+ca*22)+'%)';ctx.beginPath();ctx.arc(sx+8,sy+7,10,Math.PI,Math.PI*2);ctx.fill();
-    const ra=creature.phase*0.1;ctx.strokeStyle='hsla('+hue+',75%,70%,0.45)';ctx.lineWidth=1;
-    for(let a=0;a<3;a++){const angle=ra+a*Math.PI/3;ctx.beginPath();ctx.moveTo(sx+8,sy-3);ctx.lineTo(sx+8+Math.cos(angle)*10,sy+7+Math.sin(angle)*8);ctx.stroke();}
-    ctx.fillStyle='rgba(255,255,255,0.5)';ctx.fillRect(sx+6,sy+1,1,1);ctx.fillRect(sx+10,sy,1,1);
-  }else if(creature.type==='memory_jelly'){
-    const bobY=Math.sin(creature.floatOffset)*5;
-    const ja=0.55+Math.sin(S.time*0.05)*0.2;
-    for(let i=0;i<5;i++){
-      const tx=sx+4+i*6;const sw=Math.sin(creature.floatOffset*0.8+i*0.7)*2.5;
-      ctx.strokeStyle='rgba(139,233,253,'+(ja*0.45)+')';ctx.lineWidth=1.5;
-      ctx.beginPath();ctx.moveTo(tx,sy+18+bobY);ctx.quadraticCurveTo(tx+sw,sy+26+bobY,tx+sw*1.5,sy+30+bobY);ctx.stroke();
-      ctx.fillStyle='rgba(180,240,255,'+(ja*0.3)+')';ctx.beginPath();ctx.arc(tx+sw*1.5,sy+30+bobY,2,0,Math.PI*2);ctx.fill();
+
+    // Buildings on grid
+    const slots=[
+      {id:'hut',col:0,row:0},{id:'craft',col:1,row:0},{id:'garden',col:2,row:0},
+      {id:'storage',col:0,row:1},{id:'furnace',col:1,row:1},{id:'special',col:2,row:1},
+    ];
+    slots.forEach(s=>{
+      const gx=cx+(s.col-1.5)*gs*1.2, gy2=cy+(s.row-0.5)*gs*1.2;
+      const built=GS.buildings.includes(s.id)||(s.id==='hut');
+      if(s.id==='hut')R.drawHut(ctx,gx,gy2,gs);
+      else if(built){
+        ctx.fillStyle='#3a3020';ctx.fillRect(gx+4,gy2+4,gs-8,gs-8);
+        ctx.strokeStyle=PAL.gold;ctx.lineWidth=1;ctx.strokeRect(gx+4,gy2+4,gs-8,gs-8);
+        const icons={craft:'🔨',garden:'🌱',storage:'📦',furnace:'🔥',special:'🔮'};
+        ctx.font=`${gs*0.4}px sans-serif`;ctx.textAlign='center';
+        ctx.fillText(icons[s.id]||'❓',gx+gs/2,gy2+gs/2+gs*0.15);
+      }else{
+        ctx.fillStyle='rgba(255,255,255,.04)';ctx.fillRect(gx,gy2,gs,gs);
+        ctx.strokeStyle='rgba(200,164,92,.15)';ctx.setLineDash([4,4]);
+        ctx.strokeRect(gx,gy2,gs,gs);ctx.setLineDash([]);
+        ctx.fillStyle='rgba(200,164,92,.3)';ctx.font=`${gs*0.25}px sans-serif`;ctx.textAlign='center';
+        ctx.fillText('???',gx+gs/2,gy2+gs/2);
+      }
+    });
+
+    // Lily NPC
+    const lilyX=cx-gs*1.8, lilyY=cy+gs*0.15;
+    R.drawLily(ctx,lilyX,lilyY,gs*0.8);
+
+    // Player
+    const px=cx-gs*2.2, py=cy+gs*0.1;
+    R.drawPlayer(ctx,px,py,gs*0.75);
+
+    // Moonlight grass effect at night
+    if(GS.timeOfDay==='night'&&GS.flags.firstNight){
+      const glowX=cx+gs*1.2, glowY=cy+gs*0.3;
+      ctx.fillStyle='rgba(100,150,255,0.15)';ctx.beginPath();
+      ctx.arc(glowX,glowY,gs*0.6,0,Math.PI*2);ctx.fill();
+      // Tiny glowing flowers
+      for(let i=0;i<5;i++){
+        const fx=glowX-gs*0.3+i*gs*0.15, fy=glowY+Math.sin(Date.now()/1500+i)*3;
+        ctx.fillStyle='rgba(150,180,255,0.8)';ctx.beginPath();
+        ctx.arc(fx,fy,3,0,Math.PI*2);ctx.fill();
+      }
     }
-    ctx.fillStyle='rgba(190,210,250,'+ja+')';ctx.beginPath();ctx.arc(sx+16,sy+12+bobY,13,Math.PI,0);ctx.fill();
-    ctx.fillStyle='rgba(170,190,240,'+(ja*0.75)+')';ctx.beginPath();ctx.arc(sx+16,sy+10+bobY,8,Math.PI*0.18,Math.PI*0.82);ctx.fill();
-    const pulse=Math.sin(S.time*0.07)*0.15+0.45;
-    ctx.fillStyle='rgba(220,240,255,'+pulse+')';ctx.beginPath();ctx.arc(sx+16,sy+13+bobY,5,0,Math.PI*2);ctx.fill();
-    ctx.fillStyle='rgba(255,255,255,'+(pulse*0.6)+')';ctx.beginPath();ctx.arc(sx+16,sy+12+bobY,2,0,Math.PI*2);ctx.fill();
-  }else if(creature.type==='void_merchant'){
-    const vb=Math.sin(creature.phase)*2;
-    const va=0.45+Math.sin(S.time*0.04)*0.15;
-    ctx.strokeStyle='rgba(160,80,200,'+va+')';ctx.lineWidth=1.5;
-    ctx.beginPath();ctx.moveTo(sx+4,sy+4);ctx.lineTo(sx+28,sy+4);ctx.lineTo(sx+28,sy+30);ctx.lineTo(sx+4,sy+30);ctx.closePath();ctx.stroke();
-    ctx.fillStyle='rgba(18,0,28,'+(va+0.25)+')';ctx.fillRect(sx+7,sy+9+vb,18,22);
-    ctx.fillStyle='rgba(35,0,45,'+(va+0.35)+')';ctx.beginPath();ctx.moveTo(sx+5,sy+14+vb);ctx.lineTo(sx+16,sy);ctx.lineTo(sx+27,sy+14+vb);ctx.closePath();ctx.fill();
-    ctx.strokeStyle='rgba(70,15,90,0.3)';ctx.lineWidth=0.5;
-    ctx.beginPath();ctx.moveTo(sx+16,sy+1);ctx.lineTo(sx+12,sy+14+vb);ctx.stroke();
-    ctx.beginPath();ctx.moveTo(sx+16,sy+1);ctx.lineTo(sx+20,sy+14+vb);ctx.stroke();
-    const eg=Math.sin(S.time*0.09)*0.25+0.7;
-    ctx.fillStyle='rgba(200,150,255,'+eg+')';ctx.fillRect(sx+11,sy+10+vb,4,5);ctx.fillRect(sx+18,sy+10+vb,4,5);
-    ctx.fillStyle='rgba(255,220,255,'+(eg*0.5)+')';ctx.fillRect(sx+12,sy+11+vb,1,1);ctx.fillRect(sx+19,sy+11+vb,1,1);
-    for(let i=0;i<4;i++){
-      const sxv=sx+6+Math.sin(creature.phase+i*1.7)*8+Math.cos(creature.phase*0.5+i)*6;
-      const syv=sy+6+Math.cos(creature.phase*0.8+i*1.4)*8+Math.sin(creature.phase+i)*5;
-      ctx.fillStyle='rgba(180,120,240,'+(0.3+Math.sin(creature.phase*2+i)*0.2)+')';
-      ctx.fillRect(sxv,syv,2,2);
+  },
+  drawHut(ctx,x,y,s){
+    // Walls
+    ctx.fillStyle=PAL.wall;ctx.fillRect(x+s*0.15,y+s*0.3,s*0.7,s*0.7);
+    ctx.strokeStyle='#6B5335';ctx.lineWidth=1;ctx.strokeRect(x+s*0.15,y+s*0.3,s*0.7,s*0.7);
+    // Roof
+    ctx.fillStyle=PAL.roof;
+    ctx.beginPath();ctx.moveTo(x+s*0.05,y+s*0.3);ctx.lineTo(x+s*0.5,y+s*0.05);ctx.lineTo(x+s*0.95,y+s*0.3);
+    ctx.closePath();ctx.fill();
+    // Door
+    ctx.fillStyle='#4a2810';ctx.fillRect(x+s*0.38,y+s*0.6,s*0.24,s*0.4);
+    // Window glow
+    if(GS.timeOfDay==='night'){ctx.fillStyle='rgba(255,200,100,0.5)';ctx.fillRect(x+s*0.22,y+s*0.4,s*0.15,s*0.15);}
+    else{ctx.fillStyle='#aaddff';ctx.fillRect(x+s*0.22,y+s*0.4,s*0.15,s*0.15);}
+    // Sign
+    ctx.fillStyle='#a08060';ctx.fillRect(x+s*0.3,y+s*0.05,s*0.4,s*0.12);
+    ctx.fillStyle='#fff';ctx.font=`${s*0.1}px sans-serif`;ctx.textAlign='center';
+    ctx.fillText('🏠 家',x+s*0.5,y+s*0.15);
+  },
+  drawLily(ctx,x,y,s){
+    // Shadow
+    ctx.fillStyle='rgba(0,0,0,.2)';ctx.beginPath();ctx.ellipse(x+s/2,y+s-2,s*0.4,4,0,0,Math.PI*2);ctx.fill();
+    // Body - green robe
+    ctx.fillStyle=PAL.elfGreen;ctx.fillRect(x+s*0.2,y+s*0.35,s*0.6,s*0.65);
+    // Head
+    ctx.fillStyle=PAL.skin;ctx.fillRect(x+s*0.25,y+s*0.1,s*0.5,s*0.3);
+    // Hair
+    ctx.fillStyle=PAL.silver;ctx.fillRect(x+s*0.15,y+s*0.02,s*0.7,s*0.18);
+    ctx.fillRect(x+s*0.05,y+s*0.08,s*0.12,s*0.2);ctx.fillRect(x+s*0.83,y+s*0.08,s*0.12,s*0.2);
+    // Eyes
+    ctx.fillStyle='#2a5a2a';ctx.fillRect(x+s*0.32,y+s*0.18,s*0.08,s*0.06);
+    ctx.fillRect(x+s*0.55,y+s*0.18,s*0.08,s*0.06);
+    // Ears
+    ctx.fillStyle=PAL.skin;ctx.fillRect(x+s*0.05,y+s*0.1,s*0.12,s*0.18);
+    ctx.fillRect(x+s*0.83,y+s*0.1,s*0.12,s*0.18);
+    // Smile
+    ctx.strokeStyle='#6a4a3a';ctx.lineWidth=1;ctx.beginPath();
+    ctx.arc(x+s*0.48,y+s*0.26,s*0.06,0,Math.PI);ctx.stroke();
+    // Feet
+    ctx.fillStyle='#5a3020';ctx.fillRect(x+s*0.22,y+s*0.95,s*0.22,s*0.08);
+    ctx.fillRect(x+s*0.52,y+s*0.95,s*0.22,s*0.08);
+  },
+  drawPlayer(ctx,x,y,s){
+    // Shadow
+    ctx.fillStyle='rgba(0,0,0,.2)';ctx.beginPath();ctx.ellipse(x+s/2,y+s-2,s*0.4,4,0,0,Math.PI*2);ctx.fill();
+    // Legs
+    ctx.fillStyle='#5a4020';ctx.fillRect(x+s*0.3,y+s*0.7,s*0.18,s*0.3);
+    ctx.fillRect(x+s*0.52,y+s*0.7,s*0.18,s*0.3);
+    // Body - blue tunic
+    ctx.fillStyle='#4488cc';ctx.fillRect(x+s*0.2,y+s*0.35,s*0.6,s*0.4);
+    // Arms
+    ctx.fillStyle=PAL.skin;ctx.fillRect(x+s*0.1,y+s*0.35,s*0.12,s*0.45);
+    ctx.fillRect(x+s*0.78,y+s*0.35,s*0.12,s*0.45);
+    // Head
+    ctx.fillStyle=PAL.skin;ctx.fillRect(x+s*0.22,y+s*0.08,s*0.56,s*0.3);
+    // Hair
+    ctx.fillStyle=PAL.hair;ctx.fillRect(x+s*0.15,y+s*0.04,s*0.7,s*0.15);
+    // Eyes
+    ctx.fillStyle='#000';ctx.fillRect(x+s*0.35,y+s*0.18,s*0.08,s*0.06);
+    ctx.fillRect(x+s*0.55,y+s*0.18,s*0.08,s*0.06);
+    // Glow effect for traits
+    if(GS.traits.includes('蓝荧之触 — 指尖和月露草同步发光')){
+      ctx.fillStyle='rgba(100,150,255,0.6)';
+      ctx.fillRect(x+s*0.05,y+s*0.72,s*0.1,s*0.08);
+      ctx.fillRect(x+s*0.85,y+s*0.72,s*0.1,s*0.08);
     }
-  }
-}}
+    // Shoes
+    ctx.fillStyle='#3a2810';ctx.fillRect(x+s*0.28,y+s*0.95,s*0.2,s*0.08);
+    ctx.fillRect(x+s*0.5,y+s*0.95,s*0.2,s*0.08);
+  },
+  drawExpedition(ctx,w,h){
+    // Sky
+    const skyGrad=ctx.createLinearGradient(0,0,0,h);
+    skyGrad.addColorStop(0,'#3a5060');skyGrad.addColorStop(1,'#5a7060');
+    ctx.fillStyle=skyGrad;ctx.fillRect(0,0,w,h);
 
-function drawCrop(ctx, crop, camX, camY) {
-  const sx = crop.x * TILE - camX, sy = crop.y * TILE - camY;
-  const def = CROP_DB[crop.type];
-  const g = crop.growth;
-  ctx.fillStyle = PAL.soilDark; ctx.fillRect(sx-2, sy-2, 20, 20);
-  ctx.fillStyle = PAL.soilLight; ctx.fillRect(sx, sy, 16, 16);
-  ctx.fillStyle = PAL.soilWet; ctx.fillRect(sx+2, sy+2, 4, 2); ctx.fillRect(sx+10, sy+8, 3, 2);
-  if(g<0.02){
-    ctx.fillStyle = PAL.sproutGreen; ctx.fillRect(sx+7, sy+10, 2, 4);
-    ctx.fillStyle = '#aed581'; ctx.fillRect(sx+8, sy+8, 1, 2);
-  }else if(g<0.3){
-    ctx.fillStyle = PAL.growGreen; ctx.fillRect(sx+5, sy+5, 6, 11);
-    ctx.fillStyle = PAL.sproutGreen; ctx.fillRect(sx+6, sy+3, 4, 6);
-  }else if(g<0.7){
-    ctx.fillStyle = '#558b2f'; ctx.fillRect(sx+4, sy+3, 8, 13);
-    ctx.fillStyle = '#7cb342'; ctx.fillRect(sx+5, sy+1, 6, 6);
-    if(crop.type==='bubbleWheat'){ctx.fillStyle='#cddc39';ctx.beginPath();ctx.arc(sx+8,sy-1,3,0,Math.PI*2);ctx.fill();}
-  }else{
-    ctx.fillStyle = PAL.matureGreen; ctx.fillRect(sx+4, sy+2, 8, 14);
-    if(crop.type==='moonDew'){
-      ctx.fillStyle = PAL.moonDewBlue; ctx.beginPath();ctx.arc(sx+8, sy-1, 6.5, 0, Math.PI*2); ctx.fill();
-      ctx.fillStyle = '#bbdefb'; ctx.beginPath();ctx.arc(sx+8, sy-1, 3, 0, Math.PI*2); ctx.fill();
-      const ga = 0.18+Math.sin(S.time*0.06)*0.14;
-      ctx.fillStyle = PAL.moonDewGlow;ctx.beginPath();ctx.arc(sx+8, sy-1, 11, 0, Math.PI*2); ctx.fill();
-      ctx.fillStyle = 'rgba(255,255,255,0.3)'; ctx.fillRect(sx+6, sy-3, 2, 1);
-    }else if(crop.type==='bubbleWheat'){
-      ctx.fillStyle = PAL.bubbleWheatGold; ctx.fillRect(sx+5, sy-2, 6, 10);
-      const fg = Math.sin(S.time*0.04+crop.x*2)*4;
-      ctx.fillStyle = PAL.bubbleGrain;
-      ctx.beginPath();ctx.arc(sx+8, sy-8+fg, 3, 0, Math.PI*2); ctx.fill();
-      ctx.beginPath();ctx.arc(sx+3, sy-5+fg*0.8, 2.2, 0, Math.PI*2); ctx.fill();
-      ctx.beginPath();ctx.arc(sx+13, sy-6+fg*1.1, 2.2, 0, Math.PI*2); ctx.fill();
-      ctx.fillStyle = 'rgba(255,255,255,0.4)';ctx.beginPath();ctx.arc(sx+7, sy-9+fg, 1, 0, Math.PI*2); ctx.fill();
-    }else if(crop.type==='fireFungus'){
-      ctx.fillStyle = PAL.fireFungusRed; ctx.beginPath();ctx.arc(sx+8, sy+1, 8, Math.PI, 0); ctx.fill();
-      ctx.fillStyle = PAL.fireFungusOrange;
-      ctx.beginPath();ctx.arc(sx+5, sy-2, 4.5, Math.PI, 0); ctx.fill();
-      ctx.beginPath();ctx.arc(sx+11, sy-2, 4.5, Math.PI, 0); ctx.fill();
-      ctx.fillStyle = 'rgba(255,120,60,0.15)';ctx.beginPath();ctx.arc(sx+8, sy, 12, 0, Math.PI*2); ctx.fill();
-      if(Math.sin(S.time*0.1)>0.5){ctx.fillStyle='#ffcc80';ctx.fillRect(sx+9,sy-6,2,2);ctx.fillRect(sx+5,sy-5,1,1);}
+    // Title
+    ctx.fillStyle=PAL.gold;ctx.font='bold 16px sans-serif';ctx.textAlign='center';
+    const exp=CHAPTERS[GS.chapter]?.expeditions?.find(e=>e.id===GS.expedition.direction);
+    ctx.fillText(exp?.name||'远征',w/2,30);
+
+    // Node map
+    const nodes=GS.expedition.nodes||[];
+    const startX=w*0.1, endX=w*0.9, nodeY=h*0.45;
+    const spacing=(endX-startX)/Math.max(nodes.length-1,1);
+
+    // Path
+    ctx.strokeStyle='rgba(200,164,92,.3)';ctx.lineWidth=3;
+    ctx.beginPath();ctx.moveTo(startX,nodeY);
+    for(let i=1;i<nodes.length;i++)ctx.lineTo(startX+spacing*i,nodeY);
+    ctx.stroke();
+
+    // Nodes
+    nodes.forEach((n,i)=>{
+      const nx=startX+spacing*i;
+      const passed=i<GS.expedition.currentNode;
+      const current=i===GS.expedition.currentNode;
+
+      // Dot
+      if(passed)ctx.fillStyle='rgba(200,164,92,.5)';
+      else if(current)ctx.fillStyle=PAL.gold;
+      else ctx.fillStyle='rgba(200,164,92,.2)';
+      ctx.beginPath();ctx.arc(nx,nodeY,current?14:10,0,Math.PI*2);ctx.fill();
+      if(current){
+        ctx.strokeStyle=PAL.gold;ctx.lineWidth=2;
+        ctx.beginPath();ctx.arc(nx,nodeY,16,0,Math.PI*2);ctx.stroke();
+        // Pulse
+        const pulse=Math.sin(Date.now()/500)*3;
+        ctx.strokeStyle='rgba(200,164,92,.4)';ctx.lineWidth=1;
+        ctx.beginPath();ctx.arc(nx,nodeY,18+pulse,0,Math.PI*2);ctx.stroke();
+      }
+
+      // Label
+      ctx.fillStyle=passed?'rgba(200,164,92,.7)':'rgba(200,164,92,.3)';
+      ctx.font='12px sans-serif';ctx.textAlign='center';
+      ctx.fillText(n.label||'?',nx,nodeY-20);
+      if(n.type==='return')ctx.fillText('🏠',nx,nodeY-20);
+    });
+
+    // Current position indicator
+    if(GS.expedition.currentNode>0&&GS.expedition.currentNode<nodes.length){
+      const cx2=startX+spacing*(GS.expedition.currentNode-0.5);
+      ctx.fillStyle=PAL.gold;ctx.font='bold 14px sans-serif';ctx.textAlign='center';
+      ctx.fillText('📍',cx2,nodeY-40);
     }
-  }
-}}
 
-function render() {
-  const c = document.getElementById('game');
-  c.width = window.innerWidth;
-  c.height = window.innerHeight;
-  const ctx = c.getContext('2d');
-  ctx.imageSmoothingEnabled = false;
+    // Bottom hint
+    ctx.fillStyle='#aaa';ctx.font='13px sans-serif';ctx.textAlign='center';
+    if(!GS.expedition.active)ctx.fillText('选择一个方向开始远征',w/2,h-60);
+    else if(GS.expedition.currentNode>=nodes.length||nodes[GS.expedition.currentNode]?.type==='return')
+      ctx.fillText('点击继续返回领地',w/2,h-60);
+    else ctx.fillText('点击地图继续前进',w/2,h-60);
+  },
+  drawParticles(ctx){
+    // Particle system for future use
+  },
+};
 
-  // Camera
-  const targetCX = S.player.x * TILE - c.width/2;
-  const targetCY = S.player.y * TILE - c.height/2;
-  S.camera.x += (targetCX - S.camera.x) * 0.1;
-  S.camera.y += (targetCY - S.camera.y) * 0.1;
-  const camX = S.camera.x, camY = S.camera.y;
+// ==================== INIT ====================
+async function init(){
+  GM.updateUI();
+  R.draw();
 
-  // Visible tile range
-  const startX = Math.max(0, Math.floor(camX/TILE)-1);
-  const startY = Math.max(0, Math.floor(camY/TILE)-1);
-  const endX = Math.min(WORLD_W, startX + Math.ceil(c.width/TILE) + 2);
-  const endY = Math.min(WORLD_H, startY + Math.ceil(c.height/TILE) + 2);
+  // Opening sequence
+  await GM.delay(600);
+  await showDialog('???','💫',`你睁开眼睛。
 
-  // Draw tiles
-  for (let y = startY; y < endY; y++)
-    for (let x = startX; x < endX; x++)
-      drawTile(ctx, x, y, S.worldData[y][x]);
+陌生的天空。陌生的大地。
 
-  // Draw buildings
-  S.buildings.forEach(b => drawBuilding(ctx, b, camX, camY));
+你想不起自己的名字。想不起怎么来到这里的。但你还记得一件事——
 
-  // Draw crops
-  S.crops.forEach(c => drawCrop(ctx, c, camX, camY));
+你不属于这里。`);
 
-  // Draw creatures (behind player)
-  S.creatures.forEach(c => drawCreature(ctx, c, camX, camY));
+  await showDialog('莉莉','🧝‍♀️',`"你终于醒了！"
 
-  // Draw NPCs
-  S.npcs.forEach(n => drawNPC(ctx, n, camX, camY));
+一个银发的精灵少女蹲在你面前，绿色的眼睛里满是惊喜。
 
-  // Draw player
-  drawPlayer(ctx, camX, camY);
+"我还以为这次又是个空的——你知道，就是那种...只有身体，没有灵魂的那种？之前有好几次..."
 
-  // Particles
-  S.particles = S.particles.filter(p => p.life > 0);
-  S.particles.forEach(p => {
-    const alpha = p.life / p.maxLife;
-    const hex = Math.floor(alpha*255).toString(16).padStart(2,'0');
-    ctx.fillStyle = p.color + hex;
-    ctx.fillRect(p.x - camX, p.y - camY, 2, 2);
-    p.x += p.vx; p.y += p.vy; p.life--;
-  });
+她似乎意识到自己说得太多了，脸微微发红。
 
-  // Night overlay
-  const nightAlpha = Math.max(0, Math.min(0.5, (S.time - 900) / 300 * 0.5));
-  if (nightAlpha > 0.01) {
-    ctx.fillStyle = `rgba(10,10,40,${nightAlpha})`;
-    ctx.fillRect(0, 0, c.width, c.height);
-  }
+"我叫莉莉！在这里住了三年了。你是第一个..活着醒过来的。你叫什么名字？"`);
 
-  // Territory indicator
-  const hx = 15.5 * TILE - camX, hy = 17.5 * TILE - camY;
-  const tColor = S.territoryLevel >= 4 ? 'rgba(255,100,255,0.25)' :
-                  S.territoryLevel >= 3 ? 'rgba(100,200,255,0.25)' :
-                  S.territoryLevel >= 2 ? 'rgba(100,255,150,0.2)' :
-                  'rgba(255,215,0,0.2)';
-  ctx.strokeStyle = tColor; ctx.lineWidth = 1 + S.territoryLevel * 0.5;
-  ctx.setLineDash([6, 3]);
-  ctx.beginPath(); ctx.arc(hx, hy, S.territoryRadius * TILE, 0, Math.PI*2); ctx.stroke();
-  ctx.setLineDash([]);
+  await showDialog('我','🤔',`名字...你低头看了看自己。不认识的脸，不认识的衣服。
 
-  // Territory label
-  ctx.fillStyle = '#e8c860';
-  ctx.font = '11px monospace';
-  ctx.fillText(`Lv.${S.territoryLevel}`, hx - 12, hy - S.territoryRadius * TILE + 4);
+"我...不记得了。"
+
+莉莉的笑容凝固了一秒，然后又灿烂起来。
+
+"没关系！名字可以慢慢想。重要的是——你在这里了！"
+
+她指向远处：
+
+"看到那些浮在半空的石头了吗？这里是边缘之地——所有世界裂缝里掉下来的东西，最后都会飘到这里。包括你，包括我。"`);
+
+  await showDialog('莉莉','🧝‍♀️',`"来，我先带你看看你的领地——上一个领主留下的。虽然破破烂烂的，但修一修还能用。"
+
+她带你走向小屋。
+
+"这位前任...是个很聪明的人类。他一直在研究这个世界的真相。但后来..."她的声音低了，"他的笔记越写越乱。最后一页只有一行字：'它知道我在看它。'"
+
+然后什么都没了。他本人也消失了。`);
+
+  await showDialog('莉莉','🧝‍♀️',`"但你别怕！我不会让你步他后尘的。我们先从小的开始——你去东边探探路，收集点材料回来。我在这里等你。"
+
+她递给你一个简陋的背包。
+
+"注意安全。如果看到什么不对劲的东西...这个世界大部分东西都不对劲。所以看到特别不对劲的，就跑！"
+
+🏠 现在是你的回合了。先去东边远征吧！`);
+
+  GM.addJournal('我叫不出自己的名字。莉莉说我是"第几个醒来的"——第几个？前面还有谁？前任领主在研究真相时消失了，最后一页写着"它知道我在看它"。');
+  GM.updateUI();R.draw();
 }
 
-// ==================== 21. UI UPDATE ====================
-function updateUI() {
-  document.getElementById('cnt-stone').textContent = S.inventory.stone;
-  document.getElementById('cnt-wood').textContent = S.inventory.wood;
-  document.getElementById('cnt-starshard').textContent = S.inventory.starshard;
-  document.getElementById('cnt-herb').textContent = S.inventory.herb;
-  document.getElementById('cnt-plank').textContent = S.inventory.plank;
-  document.getElementById('cnt-ironIngot').textContent = S.inventory.ironIngot;
-  document.getElementById('cnt-crystalShard').textContent = S.inventory.crystalShard;
+// ==================== CANVAS CLICK HANDLER ====================
+document.getElementById('gc').addEventListener('click',async e=>{
+  if(GS.animQueue.length>0)return;
+  if(GS.mode==='expedition'&&GS.expedition.active){
+    await GM.advanceExpedition();
+  }else if(GS.mode==='expedition'&&!GS.expedition.active){
+    // Start expedition
+    await GM.startExpedition('east_wilds');
+  }
+});
 
-  const hours = Math.floor(S.time / 60);
-  const mins = Math.floor(S.time % 60);
-  const timeStr = `${hours}:${mins.toString().padStart(2,'0')}`;
-  const timeEmoji = S.time < 720 ? '☀️' : S.time < 1080 ? '🌅' : '🌙';
-  document.getElementById('info-time').textContent = `${timeEmoji} ${timeStr}`;
-
-  const nearHome = Math.sqrt((S.player.x-15.5)**2 + (S.player.y-17.5)**2) < S.territoryRadius;
-  const locName = nearHome ? '🏠 领地' : S.player.x > 50 ? '⚠️ 边缘地带' : S.player.x > 28 ? '🌲 东部荒野' : '🌿 领地周边';
-  document.getElementById('info-loc').textContent = `📍 ${locName}`;
-  document.getElementById('info-level').textContent = `🏠 领地 Lv.${S.territoryLevel}`;
-
-  document.querySelectorAll('.slot').forEach((el, i) => {
-    el.classList.toggle('selected', i === S.hotbarSel);
-  });
-  renderAllIcons();
+// ==================== SAVE/LOAD ====================
+function saveGame(){
+  localStorage.setItem('isekai_v4_save',JSON.stringify({
+    chapter:GS.chapter,day:GS.day,timeOfDay:GS.timeOfDay,
+    resources:GS.resources,buildings:GS.buildings,
+    traits:GS.traits,discoveries:GS.discoveries,journal:GS.journal,
+    flags:GS.flags,npcs:GS.npcs.map(n=>({id:n.id,talkedToday:n.talkedToday,affinity:n.affinity,flags:n.flags})),
+  }));
 }
-
-// ==================== 22. SAVE / LOAD ====================
-function saveGame() {
-  // Clean creatures before saving (don't persist creatures)
-  const saveData = {
-    player: S.player, time: S.time,
-    inventory: S.inventory, buildings: S.buildings,
-    discoveries: S.discoveries, bestiary: S.bestiary,
-    territoryLevel: S.territoryLevel, territoryRadius: S.territoryRadius,
-    crops: S.crops.map(c => ({ ...c })),
-    npcs: S.npcs.map(n => ({ x:n.x, y:n.y, type:n.type, name:n.name, dialogIdx:n.dialogIdx })),
-    worldData: S.worldData,
-    nextMemoryIdx: S.nextMemoryIdx, voidTraderTimer: S.voidTraderTimer
-  };
-  localStorage.setItem('isekai_pioneer_save_v2', JSON.stringify(saveData));
-}
-
-function loadGame() {
-  // Try v2 save first, then v1
-  let raw = localStorage.getItem('isekai_pioneer_save_v2');
-  if (!raw) raw = localStorage.getItem('isekai_pioneer_save'); // legacy
-  if (!raw) return false;
-  try {
-    const data = JSON.parse(raw);
-    S.player.x = data.player.x; S.player.y = data.player.y;
-    S.time = data.time; S.inventory = data.inventory || S.inventory;
-    // Merge legacy inventory
-    if (!data.inventory?.plank) S.inventory.plank = 0;
-    if (!data.inventory?.stick) S.inventory.stick = 0;
-    if (!data.inventory?.ironOre) S.inventory.ironOre = 0;
-    if (!data.inventory?.ironIngot) S.inventory.ironIngot = 0;
-    if (!data.inventory?.crystalShard) S.inventory.crystalShard = 0;
-    if (!data.inventory?.starDew) S.inventory.starDew = 0;
-    if (!data.inventory?.bubbleGrain) S.inventory.bubbleGrain = 0;
-    if (!data.inventory?.fireFungus) S.inventory.fireFungus = 0;
-
-    S.buildings = data.buildings || S.buildings;
-    // Ensure buildings have level field
-    S.buildings.forEach(b => { if (!b.level) b.level = 1; });
-    S.discoveries = data.discoveries || [];
-    S.bestiary = data.bestiary || [];
-    S.territoryLevel = data.territoryLevel || 1;
-    S.territoryRadius = data.territoryRadius || 4;
-    S.crops = data.crops || [];
-    S.npcs.forEach((n, i) => { if (data.npcs && data.npcs[i]) n.dialogIdx = data.npcs[i].dialogIdx; });
-    if (data.worldData) S.worldData = data.worldData;
-    S.nextMemoryIdx = data.nextMemoryIdx || 0;
-    S.voidTraderTimer = data.voidTraderTimer || (600 + Math.random() * 600);
-    showMsg('📂 存档已加载', '#88ff88');
-    updateUI();
+function loadGame(){
+  const raw=localStorage.getItem('isekai_v4_save');
+  if(!raw)return false;
+  try{
+    const d=JSON.parse(raw);
+    Object.assign(GS,{...GS,...d,animQueue:[],animTimer:0,particles:[],mode:'home',expedition:{active:false,direction:null,currentNode:0,nodes:[],pathIndex:0,completed:d.expedition?.completed||[]}});
     return true;
-  } catch(e) { return false; }
+  }catch(e){return false;}
 }
+setInterval(saveGame,15000);
 
-// ==================== 23. GAME LOOP ====================
-function gameLoop() {
-  updatePlayer();
-  updateTime();
-  updateCreatures();
-  updateCrops();
-
-  // Auto-save every 30s
-  S.autoSaveTimer += 0.016;
-  if (S.autoSaveTimer >= 30) { saveGame(); S.autoSaveTimer = 0; }
-
-  // Messages
-  S.messages = S.messages.filter(m => m.timer > 0);
-  S.messages.forEach(m => m.timer--);
-  const msgEl = document.getElementById('msg');
-  if (S.messages.length > 0 && S.messages[S.messages.length-1].timer > 110) {
-    const m = S.messages[S.messages.length-1];
-    msgEl.textContent = m.text; msgEl.style.color = m.color; msgEl.style.opacity = '1';
-    setTimeout(() => { msgEl.style.opacity = '0'; }, 2000);
+// ==================== BOOT ====================
+window.addEventListener('resize',()=>R.draw());
+if(loadGame()){
+  GM.updateUI();R.draw();
+  announce('📂 存档已加载');
+  // If player hasn't done first expedition, prompt
+  if(!GS.flags.firstExpedition){
+    setTimeout(async()=>{
+      await showDialog('莉莉','🧝‍♀️',`"准备好去东边看看了吗？点击底部[🗺️远征]按钮出发！"`);
+      GM.updateUI();R.draw();
+    },500);
   }
-
-  render();
-  updateUI();
-  requestAnimationFrame(gameLoop);
+}else{
+  init();
 }
-
-// ==================== 24. INIT ====================
-S.worldData = genWorld();
-if (!loadGame()) {
-  showMsg('🌍 欢迎来到异世界... 你是谁？你在哪？', '#ffd700');
-}
-spawnCreatures();
-updateUI();
-updateTerritory();
-gameLoop();
-window.addEventListener('resize', render);
 </script>
 </body>
 </html>
